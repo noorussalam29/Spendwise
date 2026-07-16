@@ -1,0 +1,105 @@
+/*
+ * SPENDWISE DESIGN SYSTEM (Tailwind CSS v4 Configuration)
+ * 
+ * Target User: Young professional in India managing salary, EMIs, recharges, and savings.
+ * 
+ * Palette Selection & Rationale:
+ * - Background Deep (#090D14): Dark blue-charcoal, minimizes phone screen fatigue for frequent daily checking.
+ * - Card Fill (#131924): Elevated container surface that stands out subtly against the deep background.
+ * - Mint Cash (#05D393): High-vitality mint green representing salary, credit logs, streaks, and savings.
+ * - Rupee Gold (#F5A623): Warm Indian-accent gold representing warning zones, upcoming EMIs, and pending items.
+ * - Crimson Alert (#FF4C6A): High-contrast warning red representing over-budget statuses and transaction deletions.
+ * - Slate Gray (#64748B): Disciplined typography and thin border styling.
+ * - Ivory White (#F1F5F9): High-readability off-white for premium text elements.
+ * 
+ * Type Pairing:
+ * - Display Font: 'Space Grotesk' (Google Fonts) - Geometric and wide, giving numbers and currency a premium fintech edge.
+ * - Body Font: 'Plus Jakarta Sans' (Google Fonts) - Clean, neutral, high-density sans that reads well on mobile screens.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-bg-deep: #090D14;
+  --color-card-fill: #131924;
+  --color-mint-cash: #05D393;
+  --color-rupee-gold: #F5A623;
+  --color-crimson-alert: #FF4C6A;
+  --color-slate-gray: #64748B;
+  --color-ivory-white: #F1F5F9;
+
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+}
+
+:root {
+  --background: #090D14;
+  --foreground: #F1F5F9;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom visual utilities for Spendwise UI */
+.font-numeric {
+  font-family: var(--font-display);
+}
+
+/* Premium micro-scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #090D14;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1E293B;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748B;
+}
+
+/* Custom interactive ring helper */
+.focus-ring {
+  @apply focus:outline-none focus:ring-1 focus:ring-mint-cash focus:border-mint-cash;
+}
+
+/* Pulse effects for the signature Pace Curve indicator */
+@keyframes breathing-glow-mint {
+  0%, 100% { box-shadow: 0 0 10px rgba(5, 211, 147, 0.15); }
+  50% { box-shadow: 0 0 20px rgba(5, 211, 147, 0.4); }
+}
+
+@keyframes breathing-glow-gold {
+  0%, 100% { box-shadow: 0 0 10px rgba(245, 166, 35, 0.15); }
+  50% { box-shadow: 0 0 20px rgba(245, 166, 35, 0.4); }
+}
+
+@keyframes breathing-glow-crimson {
+  0%, 100% { box-shadow: 0 0 10px rgba(255, 76, 106, 0.15); }
+  50% { box-shadow: 0 0 20px rgba(255, 76, 106, 0.4); }
+}
+
+.glow-mint {
+  animation: breathing-glow-mint 3s infinite ease-in-out;
+}
+
+.glow-gold {
+  animation: breathing-glow-gold 3s infinite ease-in-out;
+}
+
+.glow-crimson {
+  animation: breathing-glow-crimson 3s infinite ease-in-out;
+}
