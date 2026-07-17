@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Receipt, Wallet, Target, LogOut, Flame } from 'lucide-react';
+import { LayoutDashboard, Receipt, Wallet, FileText, Settings, LogOut, Flame } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 
 interface SidebarProps {
@@ -17,7 +17,8 @@ export default function Sidebar({ streak = 0 }: SidebarProps) {
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { label: 'Expenses', href: '/expenses', icon: Receipt },
     { label: 'Budgets', href: '/budgets', icon: Wallet },
-    { label: 'Goals', href: '/goals', icon: Target },
+    { label: 'Reports', href: '/reports', icon: FileText },
+    { label: 'Settings', href: '/settings', icon: Settings },
   ];
 
   return (

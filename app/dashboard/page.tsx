@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Flame,
   IndianRupee,
@@ -13,6 +13,7 @@ import {
   Activity,
   Sparkles,
   Plus,
+  Save,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useUIStore } from '@/lib/store';
@@ -45,7 +46,10 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export default function DashboardPage() {
   const { setQuickLogOpen } = useUIStore();
+  const queryClient = useQueryClient();
   const [isMounted, setIsMounted] = useState(false);
+  const [monthlyBudget, setMonthlyBudget] = useState(0);
+  const [isEditingBudget, setIsEditingBudget] = useState(false);
 
   // Guard against SSR hydration mismatches when rendering Recharts SVGs
   useEffect(() => {
@@ -63,6 +67,32 @@ export default function DashboardPage() {
       return response.json();
     },
   });
+
+  // Mutation to update monthly budget
+  const updateBudgetMutation = useMutation({
+    mutationFn: async (budget: number) => {
+      const response = await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ monthlyBudget: budget }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update budget');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setIsEditingBudget(false);
+    },
+  });
+
+  // Initialize monthly budget from stats
+  useEffect(() => {
+    if (stats && stats.budget && stats.budget.totalLimit > 0) {
+      setMonthlyBudget(stats.budget.totalLimit);
+    }
+  }, [stats]);
 
   if (isLoading) {
     return (
@@ -153,12 +183,12 @@ export default function DashboardPage() {
                     {/* Top Row: Category, Time Badge (Left) and Price (Right) */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-medium text-[9px] shrink-0">
+                        <span className="bg-bg-deep text-ivory-white px-2 py-0.5 rounded font-medium text-[9px] shrink-0">
                           {tx.category}
                         </span>
                         
                         {/* Timing indicator */}
-                        <span className="text-[9px] text-slate-500 font-medium font-numeric">
+                        <span className="text-[9px] text-slate-gray font-medium font-numeric">
                           {new Date(tx.date).toLocaleTimeString('en-IN', {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -179,7 +209,7 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Bottom Row: Transaction Title */}
-                    <p className="text-xs font-semibold text-slate-300 truncate" title={tx.title}>
+                    <p className="text-xs font-semibold text-ivory-white truncate" title={tx.title}>
                       {tx.title}
                     </p>
                   </div>
@@ -191,7 +221,7 @@ export default function DashboardPage() {
               <span className="text-xs text-slate-gray">Nothing logged yet today — add your first expense</span>
               <button
                 onClick={() => setQuickLogOpen(true)}
-                className="h-8 px-3.5 bg-slate-850 hover:bg-slate-800 text-mint-cash border border-mint-cash/20 hover:border-mint-cash/40 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer outline-none"
+                className="h-8 px-3.5 bg-bg-deep hover:bg-bg-deep/80 text-mint-cash border border-mint-cash/20 hover:border-mint-cash/40 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer outline-none"
               >
                 <Plus size={12} className="stroke-[2.5]" />
                 <span>Quick Log First Expense</span>
@@ -235,60 +265,23 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Cleaned layout replacing empty gaps with clear history details */}
-            <div className="grid grid-cols-2 gap-3.5 pt-1">
-              <div className="text-[11px] bg-bg-deep/45 p-3.5 rounded-lg border border-slate-gray/5 space-y-1">
-                <span className="text-[9px] font-semibold text-slate-gray tracking-wider uppercase block">
-                  Last Month's Total
-                </span>
-                <div className="font-numeric font-bold text-ivory-white flex items-center text-sm">
-                  <IndianRupee size={12} className="mr-0.5 text-slate-400" />
-                  {stats.recap.lastMonthSpent.toLocaleString('en-IN')}
-                </div>
-              </div>
-
-              <div className="text-[11px] bg-bg-deep/45 p-3.5 rounded-lg border border-slate-gray/5 space-y-1">
-                <span className="text-[9px] font-semibold text-slate-gray tracking-wider uppercase block">
-                  Budget Allocations
-                </span>
-                <div className="font-numeric font-bold text-ivory-white flex items-center text-sm">
-                  <IndianRupee size={12} className="mr-0.5 text-slate-400" />
-                  {budget.totalLimit.toLocaleString('en-IN')}
-                </div>
-              </div>
+            {/* Insight Line */}
+            <div className="pt-2">
+              <p className="text-[10px] text-slate-gray leading-relaxed">
+                {stats.recap.spentDiffPercent < 0 
+                  ? `Great job! You spent ${Math.abs(stats.recap.spentDiffPercent)}% less than last month.`
+                  : stats.recap.spentDiffPercent > 0
+                  ? `You spent ${stats.recap.spentDiffPercent}% more than last month. Consider reviewing discretionary spending.`
+                  : 'Your spending is consistent with last month.'
+                }
+              </p>
             </div>
-          </div>
-
-          <div className="border-t border-slate-gray/5 pt-4 mt-6 flex items-center justify-between">
-            <span className="text-[10px] text-slate-gray font-medium">
-              Overall Budget Status
-            </span>
-            <span className={`text-xs font-bold font-numeric ${budget.usedPercent >= 100 ? 'text-crimson-alert' : 'text-mint-cash'}`}>
-              {budget.usedPercent}% Capacity Used
-            </span>
           </div>
         </section>
       </div>
 
       {/* KPI Stats Grid */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        {/* KPI Card: Total Cycle Spent */}
-        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-3">
-          <div className="flex items-center justify-between text-slate-gray">
-            <span className="text-xs font-medium">Spent (Current Cycle)</span>
-            <IndianRupee size={16} />
-          </div>
-          <div className="space-y-1">
-            <div className="font-numeric font-bold text-2xl md:text-3xl text-ivory-white flex items-center">
-              <IndianRupee size={22} className="stroke-[2.5]" />
-              {cycle.totalSpent.toLocaleString('en-IN')}
-            </div>
-            <span className="text-[10px] text-slate-gray block">
-              Budget total: ₹{budget.totalLimit.toLocaleString('en-IN')}
-            </span>
-          </div>
-        </div>
-
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {/* KPI Card: Total Budget Used */}
         <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-3">
           <div className="flex items-center justify-between text-slate-gray">
@@ -311,6 +304,45 @@ export default function DashboardPage() {
                 style={{ width: `${Math.min(100, budget.usedPercent)}%` }}
               />
             </div>
+            {/* Monthly Budget Input */}
+            <div className="pt-2 border-t border-slate-gray/5">
+              {isEditingBudget ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={monthlyBudget}
+                    onChange={(e) => setMonthlyBudget(Number(e.target.value))}
+                    className="w-full bg-bg-deep border border-slate-gray/10 rounded px-2 py-1 text-xs text-ivory-white focus-ring"
+                    placeholder="Enter monthly budget"
+                  />
+                  <button
+                    onClick={() => updateBudgetMutation.mutate(monthlyBudget)}
+                    disabled={updateBudgetMutation.isPending}
+                    className="p-1.5 bg-mint-cash hover:bg-emerald-400 text-bg-deep rounded transition-colors disabled:opacity-50"
+                  >
+                    <Save size={12} />
+                  </button>
+                  <button
+                    onClick={() => setIsEditingBudget(false)}
+                    className="p-1.5 text-slate-gray hover:text-ivory-white transition-colors"
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-slate-gray">
+                    Budget: ₹{budget.totalLimit.toLocaleString('en-IN')}
+                  </span>
+                  <button
+                    onClick={() => setIsEditingBudget(true)}
+                    className="text-[10px] text-mint-cash hover:underline"
+                  >
+                    Edit
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -318,7 +350,7 @@ export default function DashboardPage() {
         <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-3">
           <div className="flex items-center justify-between text-slate-gray">
             <span className="text-xs font-medium">Largest Outflow</span>
-            <span className="text-[10px] bg-slate-800 text-slate-300 font-bold px-2 py-0.5 rounded-full truncate max-w-[80px]">
+            <span className="text-[10px] bg-bg-deep text-ivory-white font-bold px-2 py-0.5 rounded-full truncate max-w-[80px]">
               {summary.largestCategory.category}
             </span>
           </div>
@@ -387,14 +419,14 @@ export default function DashboardPage() {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#131924',
-                      border: '1px solid rgba(100, 116, 139, 0.15)',
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid rgba(107, 107, 99, 0.15)',
                       borderRadius: '8px',
                       fontFamily: 'var(--font-sans)',
                       fontSize: '11px',
-                      color: '#F1F5F9',
+                      color: '#1C1C1A',
                     }}
-                    itemStyle={{ color: '#F1F5F9' }}
+                    itemStyle={{ color: '#1C1C1A' }}
                     formatter={(value) => [value ? `₹${Number(value).toLocaleString('en-IN')}` : '₹0', 'Spent']}
                   />
                   <Legend
@@ -404,7 +436,7 @@ export default function DashboardPage() {
                     iconSize={8}
                     iconType="circle"
                     formatter={(value) => (
-                      <span className="text-[10px] text-slate-300 font-medium px-1.5">{value}</span>
+                      <span className="text-[10px] text-ivory-white font-medium px-1.5">{value}</span>
                     )}
                   />
                 </PieChart>
@@ -416,6 +448,25 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+
+          {/* Smart Insight */}
+          {charts.categoriesBreakdown.length > 0 && (
+            <div className="pt-3 border-t border-slate-gray/5">
+              <div className="bg-mint-cash/10 border border-mint-cash/20 rounded-lg p-3">
+                <p className="text-[11px] text-ivory-white leading-relaxed font-medium">
+                  <span className="text-rupee-gold">💡</span>{' '}
+                  {summary.largestCategory.category === 'Food' || summary.largestCategory.category === 'Shopping'
+                    ? `You spend ${Math.round((summary.largestCategory.amount / stats.recap.thisMonthSpent) * 100)}% on ${summary.largestCategory.category}. Setting a specific budget for this category could help control discretionary spending.`
+                    : summary.largestCategory.category === 'EMI' || summary.largestCategory.category === 'Rent'
+                    ? `Fixed obligations (${summary.largestCategory.category}) account for ${Math.round((summary.largestCategory.amount / stats.recap.thisMonthSpent) * 100)}% of your spending. This is typical for essential expenses.`
+                    : summary.largestCategory.category === 'Transport' || summary.largestCategory.category === 'Data/Recharge'
+                    ? `Your ${summary.largestCategory.category} spending is ${Math.round((summary.largestCategory.amount / stats.recap.thisMonthSpent) * 100)}% of your total. Consider if this aligns with your commute and connectivity needs.`
+                    : `Your highest spending category is ${summary.largestCategory.category} at ${Math.round((summary.largestCategory.amount / stats.recap.thisMonthSpent) * 100)}% of total spending.`
+                  }
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 6-Month Trend (Area Chart) */}
@@ -437,20 +488,20 @@ export default function DashboardPage() {
                 >
                   <defs>
                     <linearGradient id="colorSpent" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#05D393" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#05D393" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#1B4332" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#1B4332" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(100, 116, 139, 0.05)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(107, 107, 99, 0.05)" />
                   <XAxis
                     dataKey="month"
-                    stroke="#64748B"
+                    stroke="#6B6B63"
                     fontSize={10}
                     tickLine={false}
                     axisLine={false}
                   />
                   <YAxis
-                    stroke="#64748B"
+                    stroke="#6B6B63"
                     fontSize={10}
                     tickLine={false}
                     axisLine={false}
@@ -458,14 +509,14 @@ export default function DashboardPage() {
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#131924',
-                      border: '1px solid rgba(100, 116, 139, 0.15)',
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid rgba(107, 107, 99, 0.15)',
                       borderRadius: '8px',
                       fontFamily: 'var(--font-sans)',
                       fontSize: '11px',
                     }}
-                    itemStyle={{ color: '#F1F5F9' }}
-                    labelStyle={{ color: '#64748B', fontWeight: 'bold' }}
+                    itemStyle={{ color: '#1C1C1A' }}
+                    labelStyle={{ color: '#6B6B63', fontWeight: 'bold' }}
                     formatter={(value) => [value ? `₹${Number(value).toLocaleString('en-IN')}` : '₹0']}
                   />
                   <Legend
@@ -473,13 +524,13 @@ export default function DashboardPage() {
                     height={36}
                     iconSize={8}
                     formatter={(value) => (
-                      <span className="text-[10px] text-slate-300 font-medium px-1">{value === 'spent' ? 'Spent' : 'Budget Limit'}</span>
+                      <span className="text-[10px] text-ivory-white font-medium px-1">{value === 'spent' ? 'Spent' : 'Budget Limit'}</span>
                     )}
                   />
                   <Area
                     type="monotone"
                     dataKey="spent"
-                    stroke="#05D393"
+                    stroke="#1B4332"
                     strokeWidth={2}
                     fillOpacity={1}
                     fill="url(#colorSpent)"
@@ -487,7 +538,7 @@ export default function DashboardPage() {
                   <Area
                     type="monotone"
                     dataKey="budget"
-                    stroke="#64748B"
+                    stroke="#6B6B63"
                     strokeWidth={1.5}
                     strokeDasharray="4 4"
                     fill="none"

@@ -24,6 +24,11 @@ const UserSchema = new Schema(
       min: [1, 'Payday must be between 1 and 31'],
       max: [31, 'Payday must be between 1 and 31'],
     },
+    monthlyBudget: {
+      type: Number,
+      default: 0,
+      min: [0, 'Monthly budget must be positive'],
+    },
     currentStreak: {
       type: Number,
       default: 0,

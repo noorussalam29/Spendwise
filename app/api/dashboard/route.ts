@@ -89,7 +89,10 @@ export async function GET() {
       month: currentMonthStr,
     });
 
-    const totalBudgetLimit = budgets.reduce((sum, b) => sum + b.monthlyLimit, 0);
+    const categoryBudgetTotal = budgets.reduce((sum, b) => sum + b.monthlyLimit, 0);
+    
+    // Use user's monthly budget if set, otherwise fall back to category budgets
+    const totalBudgetLimit = user.monthlyBudget > 0 ? user.monthlyBudget : categoryBudgetTotal;
 
     // 4. Today's spending sum
     const startOfToday = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0));

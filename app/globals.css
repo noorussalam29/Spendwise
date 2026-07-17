@@ -4,39 +4,41 @@
  * Target User: Young professional in India managing salary, EMIs, recharges, and savings.
  * 
  * Palette Selection & Rationale:
- * - Background Deep (#090D14): Dark blue-charcoal, minimizes phone screen fatigue for frequent daily checking.
- * - Card Fill (#131924): Elevated container surface that stands out subtly against the deep background.
- * - Mint Cash (#05D393): High-vitality mint green representing salary, credit logs, streaks, and savings.
- * - Rupee Gold (#F5A623): Warm Indian-accent gold representing warning zones, upcoming EMIs, and pending items.
- * - Crimson Alert (#FF4C6A): High-contrast warning red representing over-budget statuses and transaction deletions.
- * - Slate Gray (#64748B): Disciplined typography and thin border styling.
- * - Ivory White (#F1F5F9): High-readability off-white for premium text elements.
+ * - Background Deep (#F3F6EF): Light warm cream background, easy on the eyes for frequent daily checking.
+ * - Card Fill (#FFFFFF): Clean white cards that stand out against the warm background.
+ * - Mint Cash (#1B4332): Deep forest green representing salary, credit logs, streaks, and savings.
+ * - Pine Light (#2D6A4F): Lighter forest green for accents and secondary elements.
+ * - Rupee Gold (#E8A33D): Warm Indian-accent gold representing warning zones, upcoming EMIs, and pending items.
+ * - Crimson Alert (#C1443C): Muted warning red representing over-budget statuses and transaction deletions.
+ * - Slate Gray (#6B6B63): Disciplined typography and thin border styling.
+ * - Ivory White (#1C1C1A): Dark text color for high readability on light backgrounds.
  * 
  * Type Pairing:
- * - Display Font: 'Space Grotesk' (Google Fonts) - Geometric and wide, giving numbers and currency a premium fintech edge.
- * - Body Font: 'Plus Jakarta Sans' (Google Fonts) - Clean, neutral, high-density sans that reads well on mobile screens.
+ * - Display Font: 'Fraunces' (Google Fonts) - Elegant serif with personality, giving numbers and currency a premium feel.
+ * - Body Font: 'Inter' (Google Fonts) - Clean, neutral, highly readable sans that works well on mobile screens.
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
 
 @import "tailwindcss";
 
 @theme {
-  --color-bg-deep: #090D14;
-  --color-card-fill: #131924;
-  --color-mint-cash: #05D393;
-  --color-rupee-gold: #F5A623;
-  --color-crimson-alert: #FF4C6A;
-  --color-slate-gray: #64748B;
-  --color-ivory-white: #F1F5F9;
+  --color-bg-deep: #F3F6EF;
+  --color-card-fill: #FFFFFF;
+  --color-mint-cash: #1B4332;
+  --color-pine-light: #2D6A4F;
+  --color-rupee-gold: #E8A33D;
+  --color-crimson-alert: #C1443C;
+  --color-slate-gray: #6B6B63;
+  --color-ivory-white: #1C1C1A;
 
-  --font-display: 'Space Grotesk', sans-serif;
-  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --font-display: 'Fraunces', serif;
+  --font-sans: 'Inter', sans-serif;
 }
 
 :root {
-  --background: #090D14;
-  --foreground: #F1F5F9;
+  --background: #F3F6EF;
+  --foreground: #1C1C1A;
 }
 
 body {
@@ -59,16 +61,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #090D14;
+  background: #F3F6EF;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1E293B;
+  background: #6B6B63;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #64748B;
+  background: #2D6A4F;
 }
 
 /* Custom interactive ring helper */
@@ -78,18 +80,18 @@ body {
 
 /* Pulse effects for the signature Pace Curve indicator */
 @keyframes breathing-glow-mint {
-  0%, 100% { box-shadow: 0 0 10px rgba(5, 211, 147, 0.15); }
-  50% { box-shadow: 0 0 20px rgba(5, 211, 147, 0.4); }
+  0%, 100% { box-shadow: 0 0 10px rgba(27, 67, 50, 0.15); }
+  50% { box-shadow: 0 0 20px rgba(27, 67, 50, 0.4); }
 }
 
 @keyframes breathing-glow-gold {
-  0%, 100% { box-shadow: 0 0 10px rgba(245, 166, 35, 0.15); }
-  50% { box-shadow: 0 0 20px rgba(245, 166, 35, 0.4); }
+  0%, 100% { box-shadow: 0 0 10px rgba(232, 163, 61, 0.15); }
+  50% { box-shadow: 0 0 20px rgba(232, 163, 61, 0.4); }
 }
 
 @keyframes breathing-glow-crimson {
-  0%, 100% { box-shadow: 0 0 10px rgba(255, 76, 106, 0.15); }
-  50% { box-shadow: 0 0 20px rgba(255, 76, 106, 0.4); }
+  0%, 100% { box-shadow: 0 0 10px rgba(193, 68, 60, 0.15); }
+  50% { box-shadow: 0 0 20px rgba(193, 68, 60, 0.4); }
 }
 
 .glow-mint {

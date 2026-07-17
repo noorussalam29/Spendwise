@@ -81,34 +81,36 @@ export async function GET(req: Request) {
       format: 'a4',
     });
 
-    // --- Styling Variables ---
-    const primaryDark = [9, 13, 20]; // Deep Charcoal #090D14
-    const cardBg = [19, 25, 36]; // Card slate background #131924
-    const mintCash = [5, 211, 147]; // Accent Mint #05D393
-    const textLight = [241, 245, 249]; // Primary text #F1F5F9
-    const textGray = [100, 116, 139]; // Muted text #64748B
-    const lineStroke = [30, 41, 59]; // Border gray #1E293B
+    // --- Styling Variables (Spendwise Theme) ---
+    const bgDeep = [243, 246, 239]; // Background #F3F6EF
+    const cardFill = [255, 255, 255]; // Card fill #FFFFFF
+    const mintCash = [27, 67, 50]; // Accent #1B4332
+    const pineLight = [45, 106, 79]; // Secondary #2D6A4F
+    const rupeeGold = [232, 163, 61]; // Gold #E8A33D
+    const ivoryWhite = [28, 28, 26]; // Text #1C1C1A
+    const slateGray = [107, 107, 99]; // Gray #6B6B63
+    const crimsonAlert = [193, 68, 60]; // Alert #C1443C
 
     // Draw header panel banner
-    doc.setFillColor(cardBg[0], cardBg[1], cardBg[2]);
+    doc.setFillColor(mintCash[0], mintCash[1], mintCash[2]);
     doc.rect(0, 0, 210, 45, 'F');
 
     // Wordmark logo text
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(22);
-    doc.setTextColor(mintCash[0], mintCash[1], mintCash[2]);
+    doc.setTextColor(255, 255, 255);
     doc.text('SPENDWISE', 15, 18);
 
     // Document label
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(11);
-    doc.setTextColor(textLight[0], textLight[1], textLight[2]);
+    doc.setTextColor(255, 255, 255);
     doc.text('MONTHLY FINANCIAL BREAKDOWN', 15, 28);
 
     // Profile metadata info aligned to the right
     doc.setFont('Helvetica', 'normal');
     doc.setFontSize(9);
-    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+    doc.setTextColor(255, 255, 255);
     doc.text(`User: ${user.name}`, 195, 16, { align: 'right' });
     doc.text(`Email: ${user.email}`, 195, 22, { align: 'right' });
     
@@ -119,7 +121,7 @@ export async function GET(req: Request) {
     doc.text(`Period: ${reportPeriodLabel}`, 195, 28, { align: 'right' });
 
     // Draw a dividing line under header banner
-    doc.setDrawColor(lineStroke[0], lineStroke[1], lineStroke[2]);
+    doc.setDrawColor(pineLight[0], pineLight[1], pineLight[2]);
     doc.line(0, 45, 210, 45);
 
     let yCursor = 58;
@@ -131,45 +133,45 @@ export async function GET(req: Request) {
     const cardY = yCursor;
 
     // Card 1: Total Spent
-    doc.setFillColor(cardBg[0], cardBg[1], cardBg[2]);
+    doc.setFillColor(cardFill[0], cardFill[1], cardFill[2]);
     doc.rect(15, cardY, cardWidth, cardHeight, 'F');
     doc.setFont('Helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+    doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
     doc.text('TOTAL SPENT', 20, cardY + 7);
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(13);
-    doc.setTextColor(textLight[0], textLight[1], textLight[2]);
+    doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
     doc.text(`INR ${totalSpent.toLocaleString('en-IN')}`, 20, cardY + 16);
 
     // Card 2: Total Budget
-    doc.setFillColor(cardBg[0], cardBg[1], cardBg[2]);
+    doc.setFillColor(cardFill[0], cardFill[1], cardFill[2]);
     doc.rect(77, cardY, cardWidth, cardHeight, 'F');
     doc.setFont('Helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+    doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
     doc.text('BUDGET LIMIT', 82, cardY + 7);
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(13);
-    doc.setTextColor(textLight[0], textLight[1], textLight[2]);
+    doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
     const limitLabel = totalLimit > 0 ? `INR ${totalLimit.toLocaleString('en-IN')}` : 'Unset';
     doc.text(limitLabel, 82, cardY + 16);
 
     // Card 3: Top Category
-    doc.setFillColor(cardBg[0], cardBg[1], cardBg[2]);
+    doc.setFillColor(cardFill[0], cardFill[1], cardFill[2]);
     doc.rect(139, cardY, cardWidth, cardHeight, 'F');
     doc.setFont('Helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+    doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
     doc.text('LARGEST OUTFLOW', 144, cardY + 7);
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(12);
-    doc.setTextColor(textLight[0], textLight[1], textLight[2]);
+    doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
     const topCatString = topCategoryName !== 'None' ? `${topCategoryName}` : 'None';
     doc.text(topCatString, 144, cardY + 14);
     doc.setFont('Helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+    doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
     doc.text(`Spent: INR ${topCategoryAmt.toLocaleString('en-IN')}`, 144, cardY + 20);
 
     yCursor += cardHeight + 15;
@@ -177,12 +179,12 @@ export async function GET(req: Request) {
     // --- Category Breakdown Grid Section ---
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(11);
-    doc.setTextColor(textLight[0], textLight[1], textLight[2]);
+    doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
     doc.text('CATEGORY BREAKDOWN', 15, yCursor);
     yCursor += 5;
 
     // Table Header
-    doc.setFillColor(cardBg[0], cardBg[1], cardBg[2]);
+    doc.setFillColor(cardFill[0], cardFill[1], cardFill[2]);
     doc.rect(15, yCursor, 180, 8, 'F');
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(8);
@@ -195,7 +197,7 @@ export async function GET(req: Request) {
     // Draw rows
     doc.setFont('Helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(textLight[0], textLight[1], textLight[2]);
+    doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
 
     const breakdownItems = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
     
@@ -224,12 +226,12 @@ export async function GET(req: Request) {
 
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(11);
-    doc.setTextColor(textLight[0], textLight[1], textLight[2]);
+    doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
     doc.text('ITEMIZED TRANSACTIONS LEDGER', 15, yCursor);
     yCursor += 5;
 
     // Table Header
-    doc.setFillColor(cardBg[0], cardBg[1], cardBg[2]);
+    doc.setFillColor(cardFill[0], cardFill[1], cardFill[2]);
     doc.rect(15, yCursor, 180, 8, 'F');
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(8);
@@ -243,7 +245,7 @@ export async function GET(req: Request) {
     // Draw rows with multi-page wrap check
     doc.setFont('Helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(textLight[0], textLight[1], textLight[2]);
+    doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
 
     if (expenses.length === 0) {
       doc.text('No itemized transactions logged.', 20, yCursor + 6);
@@ -255,7 +257,7 @@ export async function GET(req: Request) {
           yCursor = 20;
 
           // Redraw table headers on the new page
-          doc.setFillColor(cardBg[0], cardBg[1], cardBg[2]);
+          doc.setFillColor(cardFill[0], cardFill[1], cardFill[2]);
           doc.rect(15, yCursor, 180, 8, 'F');
           doc.setFont('Helvetica', 'bold');
           doc.setFontSize(8);
@@ -268,7 +270,7 @@ export async function GET(req: Request) {
           
           doc.setFont('Helvetica', 'normal');
           doc.setFontSize(8);
-          doc.setTextColor(textLight[0], textLight[1], textLight[2]);
+          doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
         }
 
         doc.line(15, yCursor, 195, yCursor);
@@ -282,10 +284,10 @@ export async function GET(req: Request) {
         doc.text(titleString, 50, yCursor + 4.5);
         // Category below title
         doc.setFontSize(6.5);
-        doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+        doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
         doc.text(e.category, 50, yCursor + 8);
         doc.setFontSize(8);
-        doc.setTextColor(textLight[0], textLight[1], textLight[2]);
+        doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
 
         // Recurring status
         doc.text(e.isRecurring ? 'Yes' : 'No', 140, yCursor + 5.5);

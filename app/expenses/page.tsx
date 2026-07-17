@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { IndianRupee, Plus, Search, Calendar, Filter, Edit2, Trash2, Loader2, FileSpreadsheet, FileDown } from 'lucide-react';
+import { IndianRupee, Plus, Search, Calendar, Filter, Edit2, Trash2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { IExpense } from '@/types';
 
 // Helper to format date in a premium human-readable way
@@ -78,12 +78,19 @@ export default function ExpensesPage() {
   const [category, setCategory] = useState('All');
   
   // Default month filter to current year-month
-  const [month, setMonth] = useState(() => {
+  const [month, setMonth] = useState<string>(() => {
     const now = new Date();
     const yyyy = now.getFullYear();
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     return `${yyyy}-${mm}`;
   });
+
+  // Day filter for day-level navigation
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+
+  // Touch handling for swipe gestures
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
 
   // Query to fetch expenses based on active filters
   const { data: expenses = [], isLoading, isError } = useQuery<IExpense[]>({
@@ -126,16 +133,6 @@ export default function ExpensesPage() {
     }
   };
 
-  // Trigger CSV export
-  const handleExportCSV = () => {
-    window.open(`/api/reports/csv?month=${month}`, '_blank');
-  };
-
-  // Trigger PDF export
-  const handleExportPDF = () => {
-    window.open(`/api/reports/pdf?month=${month}`, '_blank');
-  };
-
   const navigateMonth = (direction: 'prev' | 'next') => {
     const [year, monthNumber] = month.split('-').map(Number);
     const current = new Date(year, monthNumber - 1, 1);
@@ -148,6 +145,64 @@ export default function ExpensesPage() {
     const nextYear = current.getFullYear();
     const nextMonth = String(current.getMonth() + 1).padStart(2, '0');
     setMonth(`${nextYear}-${nextMonth}`);
+    setSelectedDay(null); // Reset day selection when changing months
+  };
+
+  const navigateDay = (direction: 'prev' | 'next') => {
+    if (!selectedDay) return;
+    
+    const [year, month, day] = selectedDay.split('-').map(Number);
+    const current = new Date(year, month - 1, day);
+    
+    if (direction === 'prev') {
+      current.setDate(current.getDate() - 1);
+    } else {
+      current.setDate(current.getDate() + 1);
+    }
+
+    const nextYear = current.getFullYear();
+    const nextMonth = String(current.getMonth() + 1).padStart(2, '0');
+    const nextDay = String(current.getDate()).padStart(2, '0');
+    
+    // If day navigation crosses month boundary, update month too
+    const newMonthStr = `${nextYear}-${nextMonth}`;
+    if (newMonthStr !== month) {
+      setMonth(newMonthStr);
+    }
+    setSelectedDay(`${nextYear}-${nextMonth}-${nextDay}`);
+  };
+
+  // Touch handlers for swipe gestures
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.changedTouches[0].screenX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    touchEndX.current = e.changedTouches[0].screenX;
+    handleSwipe();
+  };
+
+  const handleSwipe = () => {
+    const swipeThreshold = 50;
+    const diff = touchStartX.current - touchEndX.current;
+    
+    if (Math.abs(diff) > swipeThreshold) {
+      if (diff > 0) {
+        // Swipe left - go forward
+        if (selectedDay) {
+          navigateDay('next');
+        } else {
+          navigateMonth('next');
+        }
+      } else {
+        // Swipe right - go backward
+        if (selectedDay) {
+          navigateDay('prev');
+        } else {
+          navigateMonth('prev');
+        }
+      }
+    }
   };
 
   const selectedMonthExpenses = useMemo(() => {
@@ -157,6 +212,18 @@ export default function ExpensesPage() {
       return expenseDate.getFullYear() === year && expenseDate.getMonth() === monthNumber - 1;
     });
   }, [expenses, month]);
+
+  // Filter by selected day if in day view
+  const filteredExpenses = useMemo(() => {
+    if (!selectedDay) return selectedMonthExpenses;
+    return selectedMonthExpenses.filter((expense) => {
+      const expenseDate = new Date(expense.date);
+      const [year, month, day] = selectedDay.split('-').map(Number);
+      return expenseDate.getFullYear() === year && 
+             expenseDate.getMonth() === month - 1 && 
+             expenseDate.getDate() === day;
+    });
+  }, [selectedMonthExpenses, selectedDay]);
 
   const groupedExpenses = useMemo(() => {
     const groups = new Map<string, IExpense[]>();
@@ -208,26 +275,6 @@ export default function ExpensesPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* CSV Export Trigger */}
-          <button
-            onClick={handleExportCSV}
-            className="flex-1 sm:flex-initial h-10 px-4 bg-card-fill border border-slate-gray/10 hover:border-slate-gray/25 text-slate-gray hover:text-ivory-white rounded-lg flex items-center justify-center gap-2 text-xs font-semibold transition-all cursor-pointer"
-            title="Export this month to CSV"
-          >
-            <FileSpreadsheet size={14} />
-            <span>Export CSV</span>
-          </button>
-
-          {/* PDF Export Trigger */}
-          <button
-            onClick={handleExportPDF}
-            className="flex-1 sm:flex-initial h-10 px-4 bg-card-fill border border-slate-gray/10 hover:border-slate-gray/25 text-slate-gray hover:text-ivory-white rounded-lg flex items-center justify-center gap-2 text-xs font-semibold transition-all cursor-pointer"
-            title="Export this month to PDF"
-          >
-            <FileDown size={14} />
-            <span>Export PDF</span>
-          </button>
-
           <Link
             href="/expenses/new"
             className="flex-1 sm:flex-initial h-10 px-4 bg-mint-cash hover:bg-emerald-400 text-bg-deep rounded-lg flex items-center justify-center gap-2 text-xs font-bold transition-all transform hover:scale-[1.02] active:scale-[0.98]"
@@ -298,47 +345,68 @@ export default function ExpensesPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="sticky top-3 z-20 rounded-xl border border-slate-gray/10 bg-card-fill/95 px-3 py-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card-fill/80">
+            <div className="sticky top-3 z-20 rounded-xl border border-slate-gray/10 bg-card-fill/95 px-3 py-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card-fill/80"
+                 onTouchStart={handleTouchStart}
+                 onTouchEnd={handleTouchEnd}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => navigateMonth('prev')}
-                    aria-label="Go to previous month"
+                    onClick={() => selectedDay ? navigateDay('prev') : navigateMonth('prev')}
+                    aria-label="Previous"
                     className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-gray/10 bg-bg-deep text-slate-gray transition-all duration-200 hover:border-mint-cash/30 hover:text-ivory-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-cash/40"
                   >
-                    ←
+                    <ChevronLeft size={18} />
                   </button>
                   <div className="min-w-0">
-                    <h2 className="text-sm font-semibold text-ivory-white">{currentMonthLabel}</h2>
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-gray">Grouped by date</p>
+                    <h2 className="text-sm font-semibold text-ivory-white">
+                      {selectedDay ? formatDate(selectedDay) : currentMonthLabel}
+                    </h2>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-gray">
+                      {selectedDay ? 'Day View' : 'Month View'}
+                    </p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => navigateMonth('next')}
-                    disabled={isCurrentMonth}
-                    aria-label="Go to next month"
+                    onClick={() => selectedDay ? navigateDay('next') : navigateMonth('next')}
+                    disabled={!selectedDay && isCurrentMonth}
+                    aria-label="Next"
                     className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-gray/10 bg-bg-deep text-slate-gray transition-all duration-200 hover:border-mint-cash/30 hover:text-ivory-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-gray/10 disabled:hover:text-slate-gray focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-cash/40"
                   >
-                    →
+                    <ChevronRight size={18} />
                   </button>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setMonth(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`)}
+                    onClick={() => {
+                      const now = new Date();
+                      const yyyy = now.getFullYear();
+                      const mm = String(now.getMonth() + 1).padStart(2, '0');
+                      setMonth(`${yyyy}-${mm}`);
+                      setSelectedDay(null);
+                    }}
                     className="h-9 rounded-lg border border-slate-gray/10 bg-bg-deep px-3 text-[11px] font-semibold text-slate-gray transition-all duration-200 hover:border-mint-cash/30 hover:text-ivory-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-cash/40"
                   >
                     Current Month
                   </button>
+                  {selectedDay && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDay(null)}
+                      className="h-9 rounded-lg border border-slate-gray/10 bg-bg-deep px-3 text-[11px] font-semibold text-slate-gray transition-all duration-200 hover:border-mint-cash/30 hover:text-ivory-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-cash/40"
+                    >
+                      Month View
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
 
-            {selectedMonthExpenses.length === 0 ? (
+            {filteredExpenses.length === 0 ? (
               <div className="rounded-xl border border-slate-gray/10 bg-card-fill p-10 text-center shadow-sm transition-all duration-200">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-slate-700/20 bg-slate-800/40">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-slate-gray/20 bg-bg-deep/40">
                   <IndianRupee size={20} className="text-slate-gray" />
                 </div>
                 <div className="mx-auto mt-4 max-w-sm space-y-2">
@@ -363,7 +431,8 @@ export default function ExpensesPage() {
                   {groupedExpenses.map((group) => (
                     <div
                       key={group.key}
-                      className="rounded-xl border border-slate-gray/10 bg-card-fill p-3 shadow-sm transition-all duration-200 hover:border-slate-gray/20 sm:p-4"
+                      className="rounded-xl border border-slate-gray/10 bg-card-fill p-3 shadow-sm transition-all duration-200 hover:border-slate-gray/20 sm:p-4 cursor-pointer"
+                      onClick={() => !selectedDay && setSelectedDay(group.key)}
                     >
                       <div className="mb-3 flex items-center justify-between border-b border-slate-gray/5 pb-2.5">
                         <h3 className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-gray">
@@ -386,7 +455,7 @@ export default function ExpensesPage() {
                           >
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-300">
+                                <span className="rounded-full bg-bg-deep px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-ivory-white">
                                   {expense.category}
                                 </span>
                                 {expense.isRecurring && (
@@ -414,7 +483,7 @@ export default function ExpensesPage() {
                                 <Link
                                   href={`/expenses/${expense._id}`}
                                   aria-label={`Edit ${expense.title}`}
-                                  className="rounded-md p-1.5 text-slate-gray transition-all duration-200 hover:bg-slate-800 hover:text-ivory-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-cash/40"
+                                  className="rounded-md p-1.5 text-slate-gray transition-all duration-200 hover:bg-bg-deep hover:text-ivory-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-cash/40"
                                 >
                                   <Edit2 size={12} />
                                 </Link>

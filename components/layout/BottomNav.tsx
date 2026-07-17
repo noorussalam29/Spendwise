@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Receipt, Wallet, Target } from 'lucide-react';
+import { LayoutDashboard, Receipt, Wallet, FileText, Settings } from 'lucide-react';
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -11,7 +11,8 @@ export default function BottomNav() {
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { label: 'Expenses', href: '/expenses', icon: Receipt },
     { label: 'Budgets', href: '/budgets', icon: Wallet },
-    { label: 'Goals', href: '/goals', icon: Target },
+    { label: 'Reports', href: '/reports', icon: FileText },
+    { label: 'Settings', href: '/settings', icon: Settings },
   ];
 
   return (

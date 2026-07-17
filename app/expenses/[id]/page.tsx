@@ -107,7 +107,7 @@ export default function EditExpensePage() {
         </div>
         <Link
           href="/expenses"
-          className="inline-flex h-9 px-4 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg items-center justify-center text-ivory-white transition-colors"
+          className="inline-flex h-9 px-4 bg-bg-deep hover:bg-bg-deep/80 text-xs font-semibold rounded-lg items-center justify-center text-ivory-white transition-colors"
         >
           Return to Ledger
         </Link>
