@@ -131,7 +131,7 @@ export default function DashboardPage() {
     );
   }
 
-  const { cycle, pacing, budget, stats: summary, charts, recentLedger, streak } = stats;
+  const { cycle, pacing, budget, stats: summary, charts, recentLedger, streak, financials, monthlyIncome = 0 } = stats;
 
   // Get today's transactions (prioritize stats.todayLedger from the API, fall back to filtering recentLedger on the client)
   const todayLedger = summary.todayLedger || recentLedger.filter((tx: any) => {
@@ -145,147 +145,159 @@ export default function DashboardPage() {
       {/* Header Panel */}
       <div>
         <h1 className="font-display font-semibold text-2xl md:text-3xl text-ivory-white tracking-tight">
-          Dashboard
+          Financial Command Center
         </h1>
         <p className="text-sm text-slate-gray mt-1">
-          Daily overview and spending habits summary.
+          Your money at a glance. Stay in control between paydays.
         </p>
       </div>
 
-      {/* Top Section Grid: Adjusted to perfect 50/50 balance (lg:grid-cols-2) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-        {/* Today Hero Card */}
-        <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 md:p-6 shadow-xl flex flex-col gap-6 h-full justify-between">
-          <div className="space-y-2">
+      {/* HERO SECTION: Money Left + Days Until Payday */}
+      <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-6 md:p-8 shadow-xl">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Money Left - Primary Metric */}
+          <div className="space-y-3">
             <h2 className="font-display font-semibold text-xs text-slate-gray uppercase tracking-wider">
-              Today
+              Money Left This Cycle
             </h2>
-            {hasTransactionsToday ? (
-              <div className="font-numeric font-bold text-3xl md:text-4xl text-ivory-white flex items-center tracking-tight">
-                <IndianRupee size={28} className="stroke-[2.5] text-mint-cash mr-0.5" />
-                {summary.todaySpent.toLocaleString('en-IN')}
-              </div>
-            ) : null}
+            <div className="font-numeric font-bold text-4xl md:text-5xl text-ivory-white flex items-center tracking-tight">
+              <IndianRupee size={36} className="stroke-[2.5] text-mint-cash mr-1" />
+              {financials.moneyLeft.toLocaleString('en-IN')}
+            </div>
+            <p className="text-xs text-slate-gray">
+              Monthly Income (₹{(monthlyIncome || 0).toLocaleString('en-IN')}) − Current Cycle Spending (₹{cycle.totalSpent.toLocaleString('en-IN')})
+            </p>
           </div>
 
-          {/* Transactions List or Empty State */}
-          {hasTransactionsToday ? (
-            <div className="space-y-3">
-              <span className="text-[10px] text-slate-gray font-bold tracking-wider uppercase block">
-                Today's Ledger Entries
-              </span>
-              <div className="grid grid-cols-1 gap-2.5">
-                {todayLedger.map((tx: any) => (
-                  <div
-                    key={tx._id}
-                    className="flex flex-col gap-2 p-3.5 rounded-lg bg-bg-deep/45 border border-slate-gray/5 hover:border-slate-gray/10 transition-all"
-                  >
-                    {/* Top Row: Category, Time Badge (Left) and Price (Right) */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="bg-bg-deep text-ivory-white px-2 py-0.5 rounded font-medium text-[9px] shrink-0">
-                          {tx.category}
-                        </span>
-                        
-                        {/* Timing indicator */}
-                        <span className="text-[9px] text-slate-gray font-medium font-numeric">
-                          {new Date(tx.date).toLocaleTimeString('en-IN', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: true
-                          })}
-                        </span>
-
-                        {tx.isRecurring && (
-                          <span className="text-[7.5px] bg-rupee-gold/15 text-rupee-gold font-bold px-1.5 py-0.5 rounded uppercase tracking-wide shrink-0">
-                            Recurring
-                          </span>
-                        )}
-                      </div>
-                      <div className="font-numeric font-bold text-xs text-ivory-white flex items-center shrink-0">
-                        <IndianRupee size={11} className="stroke-[2.5]" />
-                        {tx.amount.toLocaleString('en-IN')}
-                      </div>
-                    </div>
-
-                    {/* Bottom Row: Transaction Title */}
-                    <p className="text-xs font-semibold text-ivory-white truncate" title={tx.title}>
-                      {tx.title}
-                    </p>
-                  </div>
-                ))}
-              </div>
+          {/* Days Until Payday */}
+          <div className="space-y-3">
+            <h2 className="font-display font-semibold text-xs text-slate-gray uppercase tracking-wider">
+              Days Until Payday
+            </h2>
+            <div className="font-numeric font-bold text-4xl md:text-5xl text-rupee-gold flex items-center tracking-tight">
+              {cycle.daysRemaining}
             </div>
-          ) : (
-            <div className="py-8 border border-dashed border-slate-gray/10 rounded-lg flex flex-col items-center justify-center text-center space-y-3">
-              <span className="text-xs text-slate-gray">Nothing logged yet today — add your first expense</span>
-              <button
-                onClick={() => setQuickLogOpen(true)}
-                className="h-8 px-3.5 bg-bg-deep hover:bg-bg-deep/80 text-mint-cash border border-mint-cash/20 hover:border-mint-cash/40 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer outline-none"
-              >
-                <Plus size={12} className="stroke-[2.5]" />
-                <span>Quick Log First Expense</span>
-              </button>
-            </div>
-          )}
-        </section>
+            <p className="text-xs text-slate-gray">
+              {cycle.daysRemaining === 1 ? 'Payday tomorrow' : cycle.daysRemaining === 0 ? 'Payday today!' : `${cycle.daysRemaining} days remaining`}
+            </p>
+          </div>
+        </div>
 
-        {/* Monthly MoM Recap Card */}
-        <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 md:p-6 shadow-xl flex flex-col justify-between h-full">
-          <div className="space-y-5 flex-1">
-            <div className="flex items-center justify-between border-b border-slate-gray/5 pb-2">
-              <h3 className="font-display font-semibold text-sm md:text-base text-ivory-white flex items-center gap-2">
-                <Sparkles size={16} className="text-mint-cash" />
-                Monthly Recap
-              </h3>
-              <span className="text-[10px] text-slate-gray font-medium">Calendar Month</span>
+        {/* Secondary Metrics: Today's Spending + Safe To Spend Today */}
+        <div className="grid grid-cols-2 gap-4 mt-8 pt-6 border-t border-slate-gray/10">
+          <div className="space-y-1">
+            <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase">
+              Today's Spending
+            </span>
+            <div className="font-numeric font-bold text-xl md:text-2xl text-ivory-white flex items-center">
+              <IndianRupee size={18} className="stroke-[2.5] mr-1" />
+              {summary.todaySpent.toLocaleString('en-IN')}
             </div>
+          </div>
+          <div className="space-y-1">
+            <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase">
+              Safe To Spend Today
+            </span>
+            <div className="font-numeric font-bold text-xl md:text-2xl text-mint-cash flex items-center">
+              <IndianRupee size={18} className="stroke-[2.5] mr-1" />
+              {pacing.safeToSpendDaily.toLocaleString('en-IN')}
+            </div>
+          </div>
+        </div>
+      </section>
 
-            <div className="space-y-1">
-              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase">
-                Total Spent This Month
-              </span>
-              <div className="flex items-baseline justify-between">
-                <div className="font-numeric font-bold text-2xl md:text-3xl text-ivory-white flex items-center tracking-tight">
-                  <IndianRupee size={22} className="stroke-[2.5] text-mint-cash mr-0.5" />
-                  {stats.recap.thisMonthSpent.toLocaleString('en-IN')}
+      {/* Category Spending Section */}
+      <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 md:p-6 space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-gray/5 pb-2">
+          <h3 className="font-display font-semibold text-sm md:text-base text-ivory-white">
+            Category Spending (This Cycle)
+          </h3>
+          <span className="text-[10px] text-slate-gray font-medium">Billing Cycle</span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          {[
+            { name: 'Food', color: CATEGORY_COLORS.Food },
+            { name: 'Transport', color: CATEGORY_COLORS.Transport },
+            { name: 'Shopping', color: CATEGORY_COLORS.Shopping },
+            { name: 'Bills', color: CATEGORY_COLORS.Rent, subcategories: ['Rent', 'EMI', 'Data/Recharge', 'Utilities'] },
+            { name: 'Family Support', color: CATEGORY_COLORS['Family Support'] },
+            { name: 'Savings', color: CATEGORY_COLORS.Savings },
+          ].map((cat) => {
+            const catAmount = charts.categoriesBreakdown
+              .filter((item: any) => cat.subcategories ? cat.subcategories.includes(item.name) : item.name === cat.name)
+              .reduce((sum: number, item: any) => sum + item.value, 0);
+
+            return (
+              <div key={cat.name} className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }} />
+                  <span className="text-xs font-semibold text-ivory-white">{cat.name}</span>
                 </div>
-                {stats.recap.lastMonthSpent > 0 && (
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      stats.recap.spentDiffPercent <= 0
-                        ? 'bg-mint-cash/10 text-mint-cash'
-                        : 'bg-crimson-alert/10 text-crimson-alert'
-                    }`}
-                  >
-                    {stats.recap.spentDiffPercent <= 0 ? '' : '+'}
-                    {stats.recap.spentDiffPercent}% MoM
-                  </span>
-                )}
+                <div className="font-numeric font-bold text-lg text-ivory-white">
+                  <IndianRupee size={14} className="stroke-[2.5] inline mr-0.5" />
+                  {catAmount.toLocaleString('en-IN')}
+                </div>
               </div>
-            </div>
+            );
+          })}
+        </div>
+      </section>
 
-            {/* Insight Line */}
-            <div className="pt-2">
-              <p className="text-[10px] text-slate-gray leading-relaxed">
-                {stats.recap.spentDiffPercent < 0 
-                  ? `Great job! You spent ${Math.abs(stats.recap.spentDiffPercent)}% less than last month.`
-                  : stats.recap.spentDiffPercent > 0
-                  ? `You spent ${stats.recap.spentDiffPercent}% more than last month. Consider reviewing discretionary spending.`
-                  : 'Your spending is consistent with last month.'
-                }
-              </p>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      {/* KPI Stats Grid */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        {/* KPI Card: Total Budget Used */}
+      {/* Financial Summary Cards */}
+      <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+        {/* Money Left */}
         <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-3">
           <div className="flex items-center justify-between text-slate-gray">
-            <span className="text-xs font-medium">Monthly Budget Used</span>
+            <span className="text-xs font-medium">Money Left</span>
+            <Wallet size={16} />
+          </div>
+          <div className="font-numeric font-bold text-2xl md:text-3xl text-mint-cash">
+            <IndianRupee size={20} className="stroke-[2.5] inline mr-0.5" />
+            {financials.moneyLeft.toLocaleString('en-IN')}
+          </div>
+        </div>
+
+        {/* Today's Spending */}
+        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-3">
+          <div className="flex items-center justify-between text-slate-gray">
+            <span className="text-xs font-medium">Today's Spending</span>
+            <Activity size={16} />
+          </div>
+          <div className="font-numeric font-bold text-2xl md:text-3xl text-ivory-white">
+            <IndianRupee size={20} className="stroke-[2.5] inline mr-0.5" />
+            {summary.todaySpent.toLocaleString('en-IN')}
+          </div>
+        </div>
+
+        {/* Sent To Family */}
+        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-3">
+          <div className="flex items-center justify-between text-slate-gray">
+            <span className="text-xs font-medium">Sent To Family</span>
+            <TrendingUp size={16} />
+          </div>
+          <div className="font-numeric font-bold text-2xl md:text-3xl text-ivory-white">
+            <IndianRupee size={20} className="stroke-[2.5] inline mr-0.5" />
+            {financials.sentToFamily.toLocaleString('en-IN')}
+          </div>
+        </div>
+
+        {/* Saved This Month */}
+        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-3">
+          <div className="flex items-center justify-between text-slate-gray">
+            <span className="text-xs font-medium">Saved This Month</span>
+            <Save size={16} />
+          </div>
+          <div className="font-numeric font-bold text-2xl md:text-3xl text-mint-cash">
+            <IndianRupee size={20} className="stroke-[2.5] inline mr-0.5" />
+            {financials.savedThisMonth.toLocaleString('en-IN')}
+          </div>
+        </div>
+
+        {/* Budget Used % */}
+        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-3">
+          <div className="flex items-center justify-between text-slate-gray">
+            <span className="text-xs font-medium">Budget Used</span>
             <Wallet size={16} />
           </div>
           <div className="space-y-1">
@@ -304,88 +316,46 @@ export default function DashboardPage() {
                 style={{ width: `${Math.min(100, budget.usedPercent)}%` }}
               />
             </div>
-            {/* Monthly Budget Input */}
-            <div className="pt-2 border-t border-slate-gray/5">
-              {isEditingBudget ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    value={monthlyBudget}
-                    onChange={(e) => setMonthlyBudget(Number(e.target.value))}
-                    className="w-full bg-bg-deep border border-slate-gray/10 rounded px-2 py-1 text-xs text-ivory-white focus-ring"
-                    placeholder="Enter monthly budget"
-                  />
-                  <button
-                    onClick={() => updateBudgetMutation.mutate(monthlyBudget)}
-                    disabled={updateBudgetMutation.isPending}
-                    className="p-1.5 bg-mint-cash hover:bg-emerald-400 text-bg-deep rounded transition-colors disabled:opacity-50"
-                  >
-                    <Save size={12} />
-                  </button>
-                  <button
-                    onClick={() => setIsEditingBudget(false)}
-                    className="p-1.5 text-slate-gray hover:text-ivory-white transition-colors"
-                  >
-                    ×
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-slate-gray">
-                    Budget: ₹{budget.totalLimit.toLocaleString('en-IN')}
-                  </span>
-                  <button
-                    onClick={() => setIsEditingBudget(true)}
-                    className="text-[10px] text-mint-cash hover:underline"
-                  >
-                    Edit
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
         </div>
 
-        {/* KPI Card: Largest Category outflow */}
+        {/* Monthly Income */}
         <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-3">
           <div className="flex items-center justify-between text-slate-gray">
-            <span className="text-xs font-medium">Largest Outflow</span>
-            <span className="text-[10px] bg-bg-deep text-ivory-white font-bold px-2 py-0.5 rounded-full truncate max-w-[80px]">
-              {summary.largestCategory.category}
-            </span>
+            <span className="text-xs font-medium">Monthly Income</span>
+            <IndianRupee size={16} />
           </div>
-          <div className="space-y-1">
-            <div className="font-numeric font-bold text-2xl md:text-3xl text-ivory-white flex items-center">
-              <IndianRupee size={22} className="stroke-[2.5]" />
-              {summary.largestCategory.amount.toLocaleString('en-IN')}
-            </div>
-            <span className="text-[10px] text-slate-gray block">
-              Top category for current calendar month
-            </span>
+          <div className="font-numeric font-bold text-2xl md:text-3xl text-ivory-white">
+            <IndianRupee size={20} className="stroke-[2.5] inline mr-0.5" />
+            {monthlyIncome.toLocaleString('en-IN')}
           </div>
         </div>
 
-        {/* KPI Card: User Streak */}
+        {/* Total Expenses */}
+        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-3">
+          <div className="flex items-center justify-between text-slate-gray">
+            <span className="text-xs font-medium">Total Expenses</span>
+            <Activity size={16} />
+          </div>
+          <div className="font-numeric font-bold text-2xl md:text-3xl text-ivory-white">
+            <IndianRupee size={20} className="stroke-[2.5] inline mr-0.5" />
+            {cycle.totalSpent.toLocaleString('en-IN')}
+          </div>
+        </div>
+
+        {/* Daily Streak */}
         <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-3">
           <div className="flex items-center justify-between text-slate-gray">
             <span className="text-xs font-medium">Daily Streak</span>
             <Flame size={16} className="text-rupee-gold" />
           </div>
-          <div className="space-y-1">
-            <div className="font-numeric font-bold text-2xl md:text-3xl text-rupee-gold flex items-center gap-1.5">
-              {streak}{' '}
-              <span className="text-xs font-sans text-slate-gray font-normal">
-                {streak === 1 ? 'day active' : 'days active'}
-              </span>
-            </div>
-            <span className="text-[10px] text-slate-gray block">
-              Keep logging daily expenses!
-            </span>
+          <div className="font-numeric font-bold text-2xl md:text-3xl text-rupee-gold">
+            {streak}
           </div>
         </div>
       </section>
 
-      {/* Recharts Grid */}
+      {/* Recharts Grid - Retained */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
         {/* Category breakdown (Pie Chart) */}
         <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 md:p-6 space-y-4">
@@ -550,17 +520,17 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Bottom section: Recent Transactions list */}
+      {/* Recent Transactions */}
       <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 md:p-6 space-y-4">
         <div className="flex items-center justify-between border-b border-slate-gray/5 pb-2">
           <h3 className="font-display font-semibold text-sm md:text-base text-ivory-white">
-            Recent Ledger Entries
+            Recent Transactions
           </h3>
           <Link
             href="/expenses"
             className="text-xs text-mint-cash hover:underline flex items-center gap-1 font-semibold"
           >
-            <span>View All Ledger</span>
+            <span>View All</span>
             <ArrowRight size={14} />
           </Link>
         </div>
@@ -568,7 +538,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           {recentLedger.length === 0 ? (
             <div className="col-span-2 text-center py-6 text-xs text-slate-gray">
-              No transactions logged yet. Use the Quick Log button below to record your first outflow!
+              No transactions logged yet. Use the Quick Log button to record your first expense!
             </div>
           ) : (
             recentLedger.map((tx: any) => (

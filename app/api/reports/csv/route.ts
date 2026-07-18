@@ -8,7 +8,6 @@ import Expense from '@/models/Expense';
 function escapeCSV(val: any): string {
   if (val === null || val === undefined) return '';
   let str = String(val);
-  // If value contains comma, quotes, or newlines, wrap in quotes and escape internal quotes
   if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
     str = str.replace(/"/g, '""');
     return `"${str}"`;
@@ -26,24 +25,39 @@ export async function GET(req: Request) {
     const userId = (session.user as any).id;
     const { searchParams } = new URL(req.url);
     const month = searchParams.get('month'); // Expects "YYYY-MM"
-
-    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
-      return new Response('Invalid month parameter', { status: 400 });
-    }
+    const dateParam = searchParams.get('date'); // Expects "YYYY-MM-DD"
 
     await dbConnect();
 
-    // 1. Fetch expenses for the target calendar month
-    const [year, monthStr] = month.split('-').map(Number);
-    const startOfMonth = new Date(Date.UTC(year, monthStr - 1, 1, 0, 0, 0, 0));
-    const endOfMonth = new Date(Date.UTC(year, monthStr, 0, 23, 59, 59, 999));
+    let startOfPeriod: Date;
+    let endOfPeriod: Date;
+    let filenamePart: string;
+
+    if (dateParam) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+        return new Response(`Invalid date format received: "${dateParam}". Expected YYYY-MM-DD`, { status: 400 });
+      }
+      const [year, monthVal, dayVal] = dateParam.split('-').map(Number);
+      startOfPeriod = new Date(Date.UTC(year, monthVal - 1, dayVal, 0, 0, 0, 0));
+      endOfPeriod = new Date(Date.UTC(year, monthVal - 1, dayVal, 23, 59, 59, 999));
+      filenamePart = dateParam;
+    } else if (month) {
+      if (!/^\d{4}-\d{2}$/.test(month)) {
+        return new Response(`Invalid month format received: "${month}". Expected YYYY-MM`, { status: 400 });
+      }
+      const [year, monthStr] = month.split('-').map(Number);
+      startOfPeriod = new Date(Date.UTC(year, monthStr - 1, 1, 0, 0, 0, 0));
+      endOfPeriod = new Date(Date.UTC(year, monthStr, 0, 23, 59, 59, 999));
+      filenamePart = month;
+    } else {
+      return new Response('Missing parameters: Either "month" (YYYY-MM) or "date" (YYYY-MM-DD) query parameter is required.', { status: 400 });
+    }
 
     const expenses = await Expense.find({
       userId,
-      date: { $gte: startOfMonth, $lte: endOfMonth },
+      date: { $gte: startOfPeriod, $lte: endOfPeriod },
     }).sort({ date: -1, createdAt: -1 });
 
-    // 2. Generate CSV rows
     const headers = ['Date', 'Title', 'Category', 'Amount (INR)', 'Notes', 'Is Recurring'];
     const rows = expenses.map((e) => {
       const dateFormatted = new Date(e.date).toLocaleDateString('en-IN', {
@@ -61,15 +75,13 @@ export async function GET(req: Request) {
       ];
     });
 
-    // Combine headers and rows
     const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
 
-    // 3. Return CSV file as a downloadable response
     return new Response(csvContent, {
       status: 200,
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="spendwise-export-${month}.csv"`,
+        'Content-Disposition': `attachment; filename="spendwise-export-${filenamePart}.csv"`,
         'Cache-Control': 'no-store, no-cache, must-revalidate',
       },
     });

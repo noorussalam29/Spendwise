@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { FileSpreadsheet, FileDown, Calendar, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileSpreadsheet, FileDown, Calendar, Download } from 'lucide-react';
 
 export default function ReportsPage() {
   const [period, setPeriod] = useState<'day' | 'month'>('month');
@@ -9,7 +9,7 @@ export default function ReportsPage() {
     const now = new Date();
     const yyyy = now.getFullYear();
     const mm = String(now.getMonth() + 1).padStart(2, '0');
-    return `${yyyy}-${mm}`;
+    return `${yyyy}-${mm}`; // Default "YYYY-MM"
   });
 
   // Touch handling for swipe gestures
@@ -31,10 +31,8 @@ export default function ReportsPage() {
     
     if (Math.abs(diff) > swipeThreshold) {
       if (diff > 0) {
-        // Swipe left - go forward
         navigateDate('next');
       } else {
-        // Swipe right - go backward
         navigateDate('prev');
       }
     }
@@ -66,31 +64,83 @@ export default function ReportsPage() {
     }
   };
 
-  const handleExportCSV = () => {
-    const params = new URLSearchParams();
-    if (period === 'month') {
-      params.append('month', date);
+  // Helper to safely switch the period and transform date values
+  const handlePeriodChange = (newPeriod: 'day' | 'month') => {
+    setPeriod(newPeriod);
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+
+    if (newPeriod === 'month') {
+      setDate(`${yyyy}-${mm}`);
     } else {
-      params.append('date', date);
+      const dd = String(now.getDate()).padStart(2, '0');
+      setDate(`${yyyy}-${mm}-${dd}`);
     }
-    window.open(`/api/reports/csv?${params.toString()}`, '_blank');
+  };
+
+  // Safe background file download handler using Fetch
+  const triggerBackgroundDownload = async (type: 'csv' | 'pdf') => {
+    try {
+      const params = new URLSearchParams();
+      if (period === 'month') {
+        params.append('month', date);
+      } else {
+        params.append('date', date);
+      }
+
+      // Fetch file with existing browser credentials (cookies) intact
+      const response = await fetch(`/api/reports/${type}?${params.toString()}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        alert(`Export failed: ${errorText || response.statusText}`);
+        return;
+      }
+
+      // Turn response stream into local browser file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `spendwise-report-${date}.${type}`;
+      
+      document.body.appendChild(a);
+      a.click();
+      
+      // Cleanup DOM
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(`Error exporting ${type.toUpperCase()}:`, error);
+      alert(`Something went wrong while exporting the ${type.toUpperCase()}.`);
+    }
+  };
+
+  const handleExportCSV = () => {
+    triggerBackgroundDownload('csv');
   };
 
   const handleExportPDF = () => {
-    const params = new URLSearchParams();
-    if (period === 'month') {
-      params.append('month', date);
-    } else {
-      params.append('date', date);
-    }
-    window.open(`/api/reports/pdf?${params.toString()}`, '_blank');
+    triggerBackgroundDownload('pdf');
   };
 
   const formatMonthLabel = (monthValue: string) => {
+    if (!monthValue || monthValue.split('-').length < 2) return 'Invalid Month';
     const [year, month] = monthValue.split('-').map(Number);
-    const date = new Date(year, month - 1, 1);
-    return date.toLocaleDateString('en-US', {
+    const d = new Date(year, month - 1, 1);
+    return d.toLocaleDateString('en-IN', {
       month: 'long',
+      year: 'numeric',
+    });
+  };
+
+  const formatDayLabel = (dayValue: string) => {
+    const d = new Date(dayValue);
+    if (isNaN(d.getTime())) return 'Invalid Date';
+    return d.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
       year: 'numeric',
     });
   };
@@ -123,7 +173,7 @@ export default function ReportsPage() {
           <div className="flex gap-3">
             <button
               type="button"
-              onClick={() => setPeriod('day')}
+              onClick={() => handlePeriodChange('day')}
               className={`flex-1 h-10 px-4 rounded-lg text-xs font-semibold transition-all ${
                 period === 'day'
                   ? 'bg-mint-cash text-bg-deep'
@@ -134,7 +184,7 @@ export default function ReportsPage() {
             </button>
             <button
               type="button"
-              onClick={() => setPeriod('month')}
+              onClick={() => handlePeriodChange('month')}
               className={`flex-1 h-10 px-4 rounded-lg text-xs font-semibold transition-all ${
                 period === 'month'
                   ? 'bg-mint-cash text-bg-deep'
@@ -178,16 +228,79 @@ export default function ReportsPage() {
             </div>
           </div>
         )}
+
+        {/* Quick Date Filters */}
+        <div className="flex flex-wrap gap-2">
+          {period === 'month' ? (
+            <>
+              <button
+                onClick={() => {
+                  const now = new Date();
+                  const yyyy = now.getFullYear();
+                  const mm = String(now.getMonth() + 1).padStart(2, '0');
+                  setDate(`${yyyy}-${mm}`);
+                }}
+                className="h-8 px-3 rounded-lg border border-slate-gray/10 bg-bg-deep text-[10px] font-semibold text-slate-gray transition-all duration-200 hover:border-mint-cash/30 hover:text-ivory-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-cash/40"
+              >
+                This Month
+              </button>
+              <button
+                onClick={() => {
+                  const now = new Date();
+                  const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                  const yyyy = prevMonth.getFullYear();
+                  const mm = String(prevMonth.getMonth() + 1).padStart(2, '0');
+                  setDate(`${yyyy}-${mm}`);
+                }}
+                className="h-8 px-3 rounded-lg border border-slate-gray/10 bg-bg-deep text-[10px] font-semibold text-slate-gray transition-all duration-200 hover:border-mint-cash/30 hover:text-ivory-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-cash/40"
+              >
+                Last Month
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => {
+                  const now = new Date();
+                  const yyyy = now.getFullYear();
+                  const mm = String(now.getMonth() + 1).padStart(2, '0');
+                  const dd = String(now.getDate()).padStart(2, '0');
+                  setDate(`${yyyy}-${mm}-${dd}`);
+                }}
+                className="h-8 px-3 rounded-lg border border-slate-gray/10 bg-bg-deep text-[10px] font-semibold text-slate-gray transition-all duration-200 hover:border-mint-cash/30 hover:text-ivory-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-cash/40"
+              >
+                Today
+              </button>
+              <button
+                onClick={() => {
+                  const now = new Date();
+                  now.setDate(now.getDate() - 1);
+                  const yyyy = now.getFullYear();
+                  const mm = String(now.getMonth() + 1).padStart(2, '0');
+                  const dd = String(now.getDate()).padStart(2, '0');
+                  setDate(`${yyyy}-${mm}-${dd}`);
+                }}
+                className="h-8 px-3 rounded-lg border border-slate-gray/10 bg-bg-deep text-[10px] font-semibold text-slate-gray transition-all duration-200 hover:border-mint-cash/30 hover:text-ivory-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-cash/40"
+              >
+                Yesterday
+              </button>
+            </>
+          )}
+        </div>
       </section>
 
       {/* Preview Section */}
-      <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 md:p-6 space-y-4">
+      <section 
+        className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 md:p-6 space-y-4"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="flex items-center justify-between border-b border-slate-gray/5 pb-2">
           <h3 className="font-display font-semibold text-sm md:text-base text-ivory-white">
             Report Preview
           </h3>
           <span className="text-[10px] text-slate-gray font-medium">
-            {period === 'month' ? formatMonthLabel(date) : date}
+            {period === 'month' ? formatMonthLabel(date) : formatDayLabel(date)}
           </span>
         </div>
 
@@ -195,7 +308,7 @@ export default function ReportsPage() {
           <div className="text-xs text-slate-gray">
             <p className="font-semibold text-ivory-white mb-2">Report Summary</p>
             <p>Period: {period === 'month' ? 'Monthly' : 'Daily'}</p>
-            <p>Date: {period === 'month' ? formatMonthLabel(date) : date}</p>
+            <p>Date: {period === 'month' ? formatMonthLabel(date) : formatDayLabel(date)}</p>
             <p className="mt-2 text-slate-gray/70">
               This report will include all transactions for the selected period, 
               categorized by spending category with totals and percentages.

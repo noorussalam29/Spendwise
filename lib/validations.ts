@@ -65,6 +65,7 @@ export const settingsSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name is too long').optional(),
   payday: z.number().min(1, 'Payday must be between 1 and 31').max(31, 'Payday must be between 1 and 31').optional(),
   monthlyBudget: z.number().min(0, 'Monthly budget must be positive').optional(),
+  monthlyIncome: z.number().min(0, 'Monthly income must be positive').optional(),
   currentPassword: z.string().min(1, 'Current password is required').optional(),
   newPassword: z.string().min(6, 'New password must be at least 6 characters').optional(),
 }).refine((data) => {

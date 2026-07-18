@@ -4,6 +4,8 @@ export interface IUser {
   email: string;
   password?: string;
   payday: number; // Day of month (e.g. 1 to 31)
+  monthlyBudget: number;
+  monthlyIncome: number;
   currentStreak: number;
   lastLoggedDate?: Date | string | null;
   createdAt: Date | string;

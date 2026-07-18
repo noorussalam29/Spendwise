@@ -22,7 +22,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: validationResult.error.issues[0].message }, { status: 400 });
     }
 
-    const { name, payday, monthlyBudget, currentPassword, newPassword } = validationResult.data;
+    const { name, payday, monthlyBudget, monthlyIncome, currentPassword, newPassword } = validationResult.data;
 
     await dbConnect();
 
@@ -58,15 +58,21 @@ export async function PATCH(req: Request) {
       user.payday = payday;
     }
 
+    // Update monthlyIncome if provided
+    if (monthlyIncome !== undefined) {
+      user.monthlyIncome = monthlyIncome;
+    }
+
     await user.save();
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Settings updated successfully',
       user: {
         name: user.name,
         email: user.email,
         payday: user.payday,
         monthlyBudget: user.monthlyBudget,
+        monthlyIncome: user.monthlyIncome,
       }
     });
   } catch (error) {

@@ -29,6 +29,11 @@ const UserSchema = new Schema(
       default: 0,
       min: [0, 'Monthly budget must be positive'],
     },
+    monthlyIncome: {
+      type: Number,
+      default: 0,
+      min: [0, 'Monthly income must be positive'],
+    },
     currentStreak: {
       type: Number,
       default: 0,

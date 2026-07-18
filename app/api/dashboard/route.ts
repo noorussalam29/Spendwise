@@ -83,6 +83,17 @@ export async function GET() {
 
     const totalSpentInCycle = cycleExpenses.reduce((sum, exp) => sum + exp.amount, 0);
 
+    // Calculate Money Left = Monthly Income - Current Billing Cycle Spending
+    const moneyLeft = Math.max(0, user.monthlyIncome - totalSpentInCycle);
+
+    // Calculate Sent To Family (Family Support category in current cycle)
+    const familySupportExpenses = cycleExpenses.filter(exp => exp.category === 'Family Support');
+    const sentToFamily = familySupportExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+
+    // Calculate Saved This Month (Savings category in current cycle)
+    const savingsExpenses = cycleExpenses.filter(exp => exp.category === 'Savings');
+    const savedThisMonth = savingsExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+
     // 3. Fetch budgets for the current calendar month
     const budgets = await Budget.find({
       userId,
@@ -225,13 +236,15 @@ export async function GET() {
     const projectedSpend = dailySpendingRate * totalCycleDays;
     
     const remainingBudget = Math.max(0, totalBudgetLimit - totalSpentInCycle);
-    const safeToSpendDaily = daysRemaining > 0 ? remainingBudget / daysRemaining : remainingBudget;
+    // Safe To Spend Today = Money Left ÷ Remaining Days Until Payday
+    const safeToSpendDaily = daysRemaining > 0 ? moneyLeft / daysRemaining : moneyLeft;
 
     const isOverPacing = totalBudgetLimit > 0 && budgetSpentPercent > daysElapsedPercent;
 
     return NextResponse.json({
       streak: user.currentStreak,
       payday: user.payday,
+      monthlyIncome: user.monthlyIncome,
       cycle: {
         start: startCycle,
         end: endCycle,
@@ -259,6 +272,11 @@ export async function GET() {
         safeToSpendDaily: Math.round(safeToSpendDaily),
         isOverPacing,
         projectedSavings: Math.round(Math.max(0, totalBudgetLimit - projectedSpend)),
+      },
+      financials: {
+        moneyLeft,
+        sentToFamily,
+        savedThisMonth,
       },
       recap,
       charts: {

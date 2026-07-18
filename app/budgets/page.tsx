@@ -128,6 +128,84 @@ export default function BudgetsPage() {
         </div>
       </div>
 
+      {/* Quick Month Navigation */}
+      <section className="flex flex-wrap gap-2">
+        <button
+          onClick={() => {
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            setMonth(`${yyyy}-${mm}`);
+          }}
+          className="h-8 px-3 rounded-lg border border-slate-gray/10 bg-bg-deep text-[10px] font-semibold text-slate-gray transition-all duration-200 hover:border-mint-cash/30 hover:text-ivory-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-cash/40"
+        >
+          This Month
+        </button>
+        <button
+          onClick={() => {
+            const now = new Date();
+            const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const yyyy = prevMonth.getFullYear();
+            const mm = String(prevMonth.getMonth() + 1).padStart(2, '0');
+            setMonth(`${yyyy}-${mm}`);
+          }}
+          className="h-8 px-3 rounded-lg border border-slate-gray/10 bg-bg-deep text-[10px] font-semibold text-slate-gray transition-all duration-200 hover:border-mint-cash/30 hover:text-ivory-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-cash/40"
+        >
+          Last Month
+        </button>
+      </section>
+
+      {/* Budget Summary Stats */}
+      {!isLoading && !isError && budgets.length > 0 && (
+        <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-4 md:p-5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="space-y-1">
+              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase">
+                Total Budget
+              </span>
+              <div className="font-numeric font-bold text-lg md:text-xl text-ivory-white flex items-center">
+                <IndianRupee size={16} className="stroke-[2.5] mr-1" />
+                {budgets.reduce((sum, b) => sum + (b.limit || 0), 0).toLocaleString('en-IN')}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase">
+                Total Spent
+              </span>
+              <div className="font-numeric font-bold text-lg md:text-xl text-ivory-white flex items-center">
+                <IndianRupee size={16} className="stroke-[2.5] mr-1" />
+                {budgets.reduce((sum, b) => sum + b.spent, 0).toLocaleString('en-IN')}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase">
+                Remaining
+              </span>
+              <div className="font-numeric font-bold text-lg md:text-xl text-mint-cash flex items-center">
+                <IndianRupee size={16} className="stroke-[2.5] mr-1" />
+                {Math.max(0, budgets.reduce((sum, b) => sum + (b.limit || 0) - b.spent, 0)).toLocaleString('en-IN')}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase">
+                Budget Health
+              </span>
+              <div className="text-sm md:text-base font-semibold text-ivory-white">
+                {(() => {
+                  const totalLimit = budgets.reduce((sum, b) => sum + (b.limit || 0), 0);
+                  const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
+                  if (totalLimit === 0) return 'No Budget Set';
+                  const percent = Math.round((totalSpent / totalLimit) * 100);
+                  if (percent > 100) return 'Over Budget';
+                  if (percent >= 80) return 'Warning';
+                  return 'On Track';
+                })()}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Main Budget Grid */}
       {isLoading ? (
         <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-12 flex flex-col items-center justify-center gap-3">

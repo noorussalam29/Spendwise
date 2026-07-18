@@ -18,7 +18,7 @@
  * - Body Font: 'Inter' (Google Fonts) - Clean, neutral, highly readable sans that works well on mobile screens.
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 @import "tailwindcss";
 
@@ -52,6 +52,31 @@ body {
 /* Custom visual utilities for Spendwise UI */
 .font-numeric {
   font-family: var(--font-display);
+}
+
+/* Smooth fade-in animation for page transitions */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Improved focus states for accessibility */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid #1B4332;
+  outline-offset: 2px;
 }
 
 /* Premium micro-scrollbar */
