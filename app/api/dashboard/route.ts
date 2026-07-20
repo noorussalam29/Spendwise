@@ -105,9 +105,13 @@ export async function GET() {
     // Use user's monthly budget if set, otherwise fall back to category budgets
     const totalBudgetLimit = user.monthlyBudget > 0 ? user.monthlyBudget : categoryBudgetTotal;
 
-    // 4. Today's spending sum
-    const startOfToday = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0));
-    const endOfToday = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999));
+    // 4. Today's spending sum (FIXED: Uses system local boundaries instead of forced mismatching UTC)
+    const startOfToday = new Date(today);
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const endOfToday = new Date(today);
+    endOfToday.setHours(23, 59, 59, 999);
+
     const todayExpenses = await Expense.find({
       userId,
       date: { $gte: startOfToday, $lte: endOfToday },

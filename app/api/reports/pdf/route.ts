@@ -55,7 +55,7 @@ export async function GET(req: Request) {
         year: 'numeric',
       });
       budgetMonthKey = `${year}-${String(monthVal).padStart(2, '0')}`;
-      filenamePart = dateParam;
+      filenamePart = `day-${dateParam}`;
     } else if (month) {
       if (!/^\d{4}-\d{2}$/.test(month)) {
         return new Response(`Invalid month format received: "${month}". Expected YYYY-MM`, { status: 400 });
@@ -69,7 +69,7 @@ export async function GET(req: Request) {
         year: 'numeric',
       });
       budgetMonthKey = month;
-      filenamePart = month;
+      filenamePart = `month-${month}`;
     } else {
       return new Response('Missing parameters: Either "month" (YYYY-MM) or "date" (YYYY-MM-DD) query parameter is required.', { status: 400 });
     }

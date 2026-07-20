@@ -87,7 +87,7 @@ export default function RegisterPage() {
             <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-gray/50" />
             <input
               type="text"
-              placeholder="e.g. Aditya Sharma"
+              placeholder="e.g. Mohamed"
               {...register('name')}
               className={`w-full bg-bg-deep border rounded-lg pl-10 pr-4 py-2.5 text-sm text-ivory-white placeholder:text-slate-gray/30 focus-ring ${
                 errors.name ? 'border-crimson-alert/40' : 'border-slate-gray/10'
@@ -109,7 +109,7 @@ export default function RegisterPage() {
             <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-gray/50" />
             <input
               type="email"
-              placeholder="e.g. aditya@gmail.com"
+              placeholder="e.g. mohamed@gmail.com"
               {...register('email')}
               className={`w-full bg-bg-deep border rounded-lg pl-10 pr-4 py-2.5 text-sm text-ivory-white placeholder:text-slate-gray/30 focus-ring ${
                 errors.email ? 'border-crimson-alert/40' : 'border-slate-gray/10'

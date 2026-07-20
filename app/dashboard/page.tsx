@@ -11,12 +11,13 @@ import {
   ArrowRight,
   PieChart as PieIcon,
   Activity,
-  Sparkles,
-  Plus,
   Save,
+  Check,
+  Edit2,
+  Calendar,
+  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useUIStore } from '@/lib/store';
 import {
   PieChart,
   Pie,
@@ -31,44 +32,37 @@ import {
   Legend,
 } from 'recharts';
 
-// Custom Category Color Palette matching fintech aesthetics
 const CATEGORY_COLORS: Record<string, string> = {
-  Food: '#38BDF8', // Sky Blue
-  Transport: '#818CF8', // Indigo
-  Rent: '#34D399', // Soft Mint
-  Shopping: '#FB7185', // Rose
-  'Data/Recharge': '#A78BFA', // Purple
-  EMI: '#F5A623', // Rupee Gold
-  'Family Support': '#F472B6', // Pink
-  Savings: '#05D393', // Mint Cash
-  Other: '#64748B', // Slate Gray
+  Food: '#38BDF8',
+  Transport: '#818CF8',
+  Rent: '#34D399',
+  Shopping: '#FB7185',
+  'Data/Recharge': '#A78BFA',
+  EMI: '#F5A623',
+  'Family Support': '#F472B6',
+  Savings: '#05D393',
+  Other: '#64748B',
 };
 
 export default function DashboardPage() {
-  const { setQuickLogOpen } = useUIStore();
   const queryClient = useQueryClient();
   const [isMounted, setIsMounted] = useState(false);
   const [monthlyBudget, setMonthlyBudget] = useState(0);
   const [isEditingBudget, setIsEditingBudget] = useState(false);
 
-  // Guard against SSR hydration mismatches when rendering Recharts SVGs
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // TanStack Query to fetch dashboard statistics
   const { data: stats, isLoading, isError } = useQuery({
     queryKey: ['dashboard'],
     queryFn: async () => {
       const response = await fetch('/api/dashboard');
-      if (!response.ok) {
-        throw new Error('Failed to fetch dashboard data');
-      }
+      if (!response.ok) throw new Error('Failed to fetch data');
       return response.json();
     },
   });
 
-  // Mutation to update monthly budget
   const updateBudgetMutation = useMutation({
     mutationFn: async (budget: number) => {
       const response = await fetch('/api/settings', {
@@ -76,9 +70,7 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ monthlyBudget: budget }),
       });
-      if (!response.ok) {
-        throw new Error('Failed to update budget');
-      }
+      if (!response.ok) throw new Error('Failed to update budget');
       return response.json();
     },
     onSuccess: () => {
@@ -87,24 +79,23 @@ export default function DashboardPage() {
     },
   });
 
-  // Initialize monthly budget from stats
   useEffect(() => {
-    if (stats && stats.budget && stats.budget.totalLimit > 0) {
+    if (stats?.budget?.totalLimit > 0) {
       setMonthlyBudget(stats.budget.totalLimit);
     }
   }, [stats]);
 
   if (isLoading) {
     return (
-      <div className="space-y-6 md:space-y-8 pb-12">
-        {/* Skeleton Header */}
-        <div className="h-10 w-48 bg-card-fill border border-slate-gray/5 rounded-lg animate-pulse" />
-        {/* Skeleton Signature Gauge */}
-        <div className="h-48 w-full bg-card-fill border border-slate-gray/10 rounded-xl animate-pulse" />
-        {/* Skeleton KPI Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="space-y-6 md:space-y-8 pb-12 animate-pulse">
+        <div className="flex justify-between items-center">
+          <div className="h-9 w-56 bg-card-fill rounded-lg" />
+          <div className="h-9 w-28 bg-card-fill rounded-lg" />
+        </div>
+        <div className="h-48 w-full bg-card-fill rounded-xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-28 bg-card-fill border border-slate-gray/10 rounded-xl animate-pulse" />
+            <div key={i} className="h-28 bg-card-fill rounded-xl" />
           ))}
         </div>
       </div>
@@ -113,17 +104,17 @@ export default function DashboardPage() {
 
   if (isError || !stats) {
     return (
-      <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-12 text-center max-w-lg mx-auto space-y-4">
+      <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-12 text-center max-w-lg mx-auto space-y-4 shadow-sm">
         <AlertTriangle size={32} className="text-crimson-alert mx-auto animate-bounce" />
         <div>
           <h3 className="text-sm font-semibold text-ivory-white">Failed to load dashboard metrics</h3>
           <p className="text-xs text-slate-gray mt-1 leading-relaxed">
-            There was an error communicating with the server. Please check your database connection or try reloading the page.
+            There was an error communicating with the server. Please check your connection.
           </p>
         </div>
         <button
           onClick={() => window.location.reload()}
-          className="inline-flex h-9 px-4 bg-mint-cash hover:bg-emerald-400 text-bg-deep text-xs font-bold rounded-lg items-center justify-center transition-colors cursor-pointer"
+          className="inline-flex h-9 px-4 bg-mint-cash hover:opacity-90 text-white text-xs font-bold rounded-lg items-center justify-center transition-colors cursor-pointer"
         >
           Retry Connection
         </button>
@@ -131,234 +122,197 @@ export default function DashboardPage() {
     );
   }
 
-  const { cycle, pacing, budget, stats: summary, charts, recentLedger, streak, financials, monthlyIncome = 0 } = stats;
-
-  // Get today's transactions (prioritize stats.todayLedger from the API, fall back to filtering recentLedger on the client)
-  const todayLedger = summary.todayLedger || recentLedger.filter((tx: any) => {
-    const txDate = new Date(tx.date);
-    return txDate.toDateString() === new Date().toDateString();
-  }).slice(0, 3);
-  const hasTransactionsToday = todayLedger.length > 0;
+  const { 
+    cycle = { totalSpent: 0, daysRemaining: 0 }, 
+    pacing = { safeToSpendDaily: 0 }, 
+    budget = { usedPercent: 0, totalLimit: 0 }, 
+    stats: summary = { todaySpent: 0, largestCategory: { category: 'Other', amount: 0 } }, 
+    charts = { categoriesBreakdown: [], trend: [] }, 
+    recentLedger = [], 
+    financials = { moneyLeft: 0, sentToFamily: 0, savedThisMonth: 0 }, 
+    monthlyIncome = 0 
+  } = stats;
 
   return (
-    <div className="space-y-6 md:space-y-8 animate-fade-in pb-16">
-      {/* Header Panel */}
-      <div>
-        <h1 className="font-display font-semibold text-2xl md:text-3xl text-ivory-white tracking-tight">
-          Financial Command Center
-        </h1>
-        <p className="text-sm text-slate-gray mt-1">
-          Your money at a glance. Stay in control between paydays.
-        </p>
+    <div className="space-y-6 md:space-y-8 animate-fade-in pb-16 text-ivory-white">
+      
+      {/* Header Container */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-gray/10 pb-4">
+        <div>
+          <h1 className="font-display font-semibold text-2xl md:text-3xl text-ivory-white tracking-tight">
+            Financial Command Center
+          </h1>
+          <p className="text-sm text-slate-gray mt-1">
+            Your money at a glance. Stay in control between paydays.
+          </p>
+        </div>
       </div>
 
-      {/* HERO SECTION: Money Left + Days Until Payday */}
-      <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-6 md:p-8 shadow-xl">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Money Left - Primary Metric */}
-          <div className="space-y-3">
-            <h2 className="font-display font-semibold text-xs text-slate-gray uppercase tracking-wider">
-              Money Left This Cycle
+      {/* HERO SECTION CONTAINER - Rearranged to match wireframe sketch */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Left Card: Today's Outflow + Pacing Dynamics */}
+        <div className="lg:col-span-2 bg-card-fill border border-slate-gray/10 rounded-xl p-6 md:p-8 shadow-sm flex flex-col justify-between space-y-6">
+          <div className="space-y-2">
+            <h2 className="font-display font-medium text-xs text-slate-gray uppercase tracking-wider">
+              Today's Outflow
             </h2>
             <div className="font-numeric font-bold text-4xl md:text-5xl text-ivory-white flex items-center tracking-tight">
-              <IndianRupee size={36} className="stroke-[2.5] text-mint-cash mr-1" />
-              {financials.moneyLeft.toLocaleString('en-IN')}
-            </div>
-            <p className="text-xs text-slate-gray">
-              Monthly Income (₹{(monthlyIncome || 0).toLocaleString('en-IN')}) − Current Cycle Spending (₹{cycle.totalSpent.toLocaleString('en-IN')})
-            </p>
-          </div>
-
-          {/* Days Until Payday */}
-          <div className="space-y-3">
-            <h2 className="font-display font-semibold text-xs text-slate-gray uppercase tracking-wider">
-              Days Until Payday
-            </h2>
-            <div className="font-numeric font-bold text-4xl md:text-5xl text-rupee-gold flex items-center tracking-tight">
-              {cycle.daysRemaining}
-            </div>
-            <p className="text-xs text-slate-gray">
-              {cycle.daysRemaining === 1 ? 'Payday tomorrow' : cycle.daysRemaining === 0 ? 'Payday today!' : `${cycle.daysRemaining} days remaining`}
-            </p>
-          </div>
-        </div>
-
-        {/* Secondary Metrics: Today's Spending + Safe To Spend Today */}
-        <div className="grid grid-cols-2 gap-4 mt-8 pt-6 border-t border-slate-gray/10">
-          <div className="space-y-1">
-            <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase">
-              Today's Spending
-            </span>
-            <div className="font-numeric font-bold text-xl md:text-2xl text-ivory-white flex items-center">
-              <IndianRupee size={18} className="stroke-[2.5] mr-1" />
+              <IndianRupee size={36} className="stroke-[2.5] text-ivory-white mr-1" />
               {summary.todaySpent.toLocaleString('en-IN')}
             </div>
           </div>
-          <div className="space-y-1">
-            <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase">
-              Safe To Spend Today
-            </span>
-            <div className="font-numeric font-bold text-xl md:text-2xl text-mint-cash flex items-center">
-              <IndianRupee size={18} className="stroke-[2.5] mr-1" />
-              {pacing.safeToSpendDaily.toLocaleString('en-IN')}
+          
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-gray/5">
+            <div className="space-y-1">
+              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase">
+                Safe To Spend Today
+              </span>
+              <div className="font-numeric font-bold text-xl text-mint-cash flex items-center">
+                <IndianRupee size={16} className="stroke-[2.5] mr-0.5" />
+                {pacing.safeToSpendDaily.toLocaleString('en-IN')}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <span className="text-[10px] text-slate-gray block uppercase font-medium">
+                Days to Payday
+              </span>
+              <span className="text-xl font-bold text-rupee-gold font-numeric">
+                {cycle.daysRemaining} days
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Card: Money Left + Income & Spending Overview */}
+        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-6 flex flex-col justify-between space-y-6 shadow-sm">
+          <div className="space-y-2">
+            <h2 className="font-display font-medium text-xs text-slate-gray uppercase tracking-wider">
+              Money Left This Cycle
+            </h2>
+            <div className="font-numeric font-bold text-3xl md:text-4xl text-ivory-white flex items-center tracking-tight">
+              <IndianRupee size={28} className="stroke-[2.5] text-mint-cash mr-1" />
+              {financials.moneyLeft.toLocaleString('en-IN')}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-gray/5 text-xs text-slate-gray">
+            <div>
+              <span className="block text-[10px] text-slate-gray uppercase font-medium">Monthly Income</span>
+              <span className="font-semibold text-ivory-white text-sm">₹{monthlyIncome.toLocaleString('en-IN')}</span>
+            </div>
+            <div>
+              <span className="block text-[10px] text-slate-gray uppercase font-medium">Cycle Spending</span>
+              <span className="font-semibold text-crimson-alert text-sm">₹{cycle.totalSpent.toLocaleString('en-IN')}</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Category Spending Section */}
-      <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 md:p-6 space-y-4">
+      {/* Live Category Burn Rates */}
+      <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 md:p-6 space-y-4 shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-gray/5 pb-2">
-          <h3 className="font-display font-semibold text-sm md:text-base text-ivory-white">
-            Category Spending (This Cycle)
+          <h3 className="font-display font-semibold text-sm md:text-base text-ivory-white flex items-center gap-2">
+            <Calendar size={15} className="text-slate-gray" />
+            Live Category Burn Rates
           </h3>
-          <span className="text-[10px] text-slate-gray font-medium">Billing Cycle</span>
+          <span className="text-[10px] bg-card-fill border border-slate-gray/5 px-2 py-0.5 rounded text-slate-gray font-medium">Active Budget</span>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {[
-            { name: 'Food', color: CATEGORY_COLORS.Food },
-            { name: 'Transport', color: CATEGORY_COLORS.Transport },
-            { name: 'Shopping', color: CATEGORY_COLORS.Shopping },
-            { name: 'Bills', color: CATEGORY_COLORS.Rent, subcategories: ['Rent', 'EMI', 'Data/Recharge', 'Utilities'] },
-            { name: 'Family Support', color: CATEGORY_COLORS['Family Support'] },
-            { name: 'Savings', color: CATEGORY_COLORS.Savings },
-          ].map((cat) => {
-            const catAmount = charts.categoriesBreakdown
-              .filter((item: any) => cat.subcategories ? cat.subcategories.includes(item.name) : item.name === cat.name)
-              .reduce((sum: number, item: any) => sum + item.value, 0);
-
-            return (
-              <div key={cat.name} className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }} />
-                  <span className="text-xs font-semibold text-ivory-white">{cat.name}</span>
-                </div>
-                <div className="font-numeric font-bold text-lg text-ivory-white">
-                  <IndianRupee size={14} className="stroke-[2.5] inline mr-0.5" />
-                  {catAmount.toLocaleString('en-IN')}
-                </div>
+          {charts.categoriesBreakdown.slice(0, 6).map((cat: any) => (
+            <div key={cat.name} className="bg-card-fill border border-slate-gray/5 rounded-lg p-3 transition-all hover:border-slate-gray/10">
+              <div className="flex items-center gap-1.5 mb-1 truncate">
+                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: CATEGORY_COLORS[cat.name] || '#64748B' }} />
+                <span className="text-xs font-medium text-slate-gray truncate">{cat.name}</span>
               </div>
-            );
-          })}
+              <div className="font-numeric font-bold text-base text-ivory-white">
+                <IndianRupee size={12} className="stroke-[2.5] inline mr-0.5 text-slate-gray" />
+                {cat.value.toLocaleString('en-IN')}
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* Financial Summary Cards */}
-      <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-        {/* Money Left */}
-        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-3">
+      {/* MAIN VALUE GRID */}
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+        
+        {/* Budget Metric Card */}
+        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 flex flex-col justify-between min-h-[110px] shadow-sm">
           <div className="flex items-center justify-between text-slate-gray">
-            <span className="text-xs font-medium">Money Left</span>
-            <Wallet size={16} />
+            <span className="text-xs font-medium">Budget Used ({budget.usedPercent}%)</span>
+            <button 
+              onClick={() => setIsEditingBudget(!isEditingBudget)} 
+              className="p-1 hover:bg-card-fill border border-transparent hover:border-slate-gray/5 text-slate-gray hover:text-ivory-white rounded transition-colors cursor-pointer"
+            >
+              {isEditingBudget ? <Check size={14} className="text-mint-cash" /> : <Edit2 size={12} />}
+            </button>
           </div>
-          <div className="font-numeric font-bold text-2xl md:text-3xl text-mint-cash">
-            <IndianRupee size={20} className="stroke-[2.5] inline mr-0.5" />
-            {financials.moneyLeft.toLocaleString('en-IN')}
+          
+          <div className="my-1">
+            {isEditingBudget ? (
+              <div className="flex items-center gap-1.5 mt-1">
+                <input
+                  type="number"
+                  value={monthlyBudget}
+                  onChange={(e) => setMonthlyBudget(Number(e.target.value))}
+                  className="w-full bg-card-fill text-ivory-white text-sm font-bold p-1 rounded border border-slate-gray/10 focus:outline-none focus:border-mint-cash"
+                />
+                <button
+                  onClick={() => updateBudgetMutation.mutate(monthlyBudget)}
+                  className="p-1.5 bg-mint-cash text-white rounded hover:opacity-90 transition-colors cursor-pointer"
+                >
+                  <Save size={14} />
+                </button>
+              </div>
+            ) : (
+              <div className="font-numeric font-bold text-xl md:text-2xl text-ivory-white">
+                ₹{budget.totalLimit.toLocaleString('en-IN')}
+              </div>
+            )}
           </div>
-        </div>
 
-        {/* Today's Spending */}
-        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-3">
-          <div className="flex items-center justify-between text-slate-gray">
-            <span className="text-xs font-medium">Today's Spending</span>
-            <Activity size={16} />
-          </div>
-          <div className="font-numeric font-bold text-2xl md:text-3xl text-ivory-white">
-            <IndianRupee size={20} className="stroke-[2.5] inline mr-0.5" />
-            {summary.todaySpent.toLocaleString('en-IN')}
+          <div className="w-full bg-slate-gray/10 h-1.5 rounded-full overflow-hidden mt-2">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${
+                budget.usedPercent > 100 ? 'bg-crimson-alert' : budget.usedPercent >= 80 ? 'bg-rupee-gold' : 'bg-mint-cash'
+              }`}
+              style={{ width: `${Math.min(100, budget.usedPercent)}%` }}
+            />
           </div>
         </div>
 
         {/* Sent To Family */}
-        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-3">
+        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between text-slate-gray">
             <span className="text-xs font-medium">Sent To Family</span>
-            <TrendingUp size={16} />
+            <TrendingUp size={16} className="text-slate-gray" />
           </div>
-          <div className="font-numeric font-bold text-2xl md:text-3xl text-ivory-white">
-            <IndianRupee size={20} className="stroke-[2.5] inline mr-0.5" />
+          <div className="font-numeric font-bold text-xl md:text-2xl text-ivory-white">
+            <IndianRupee size={18} className="stroke-[2.5] inline mr-0.5 text-slate-gray" />
             {financials.sentToFamily.toLocaleString('en-IN')}
           </div>
         </div>
 
         {/* Saved This Month */}
-        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-3">
+        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between text-slate-gray">
             <span className="text-xs font-medium">Saved This Month</span>
-            <Save size={16} />
+            <Flame size={16} className="text-mint-cash" />
           </div>
-          <div className="font-numeric font-bold text-2xl md:text-3xl text-mint-cash">
-            <IndianRupee size={20} className="stroke-[2.5] inline mr-0.5" />
+          <div className="font-numeric font-bold text-xl md:text-2xl text-mint-cash">
+            <IndianRupee size={18} className="stroke-[2.5] inline mr-0.5" />
             {financials.savedThisMonth.toLocaleString('en-IN')}
-          </div>
-        </div>
-
-        {/* Budget Used % */}
-        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-3">
-          <div className="flex items-center justify-between text-slate-gray">
-            <span className="text-xs font-medium">Budget Used</span>
-            <Wallet size={16} />
-          </div>
-          <div className="space-y-1">
-            <div className="font-numeric font-bold text-2xl md:text-3xl text-ivory-white">
-              {budget.usedPercent}%
-            </div>
-            <div className="w-full bg-bg-deep h-1.5 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full ${
-                  budget.usedPercent > 100
-                    ? 'bg-crimson-alert'
-                    : budget.usedPercent >= 80
-                    ? 'bg-rupee-gold'
-                    : 'bg-mint-cash'
-                }`}
-                style={{ width: `${Math.min(100, budget.usedPercent)}%` }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Monthly Income */}
-        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-3">
-          <div className="flex items-center justify-between text-slate-gray">
-            <span className="text-xs font-medium">Monthly Income</span>
-            <IndianRupee size={16} />
-          </div>
-          <div className="font-numeric font-bold text-2xl md:text-3xl text-ivory-white">
-            <IndianRupee size={20} className="stroke-[2.5] inline mr-0.5" />
-            {monthlyIncome.toLocaleString('en-IN')}
-          </div>
-        </div>
-
-        {/* Total Expenses */}
-        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-3">
-          <div className="flex items-center justify-between text-slate-gray">
-            <span className="text-xs font-medium">Total Expenses</span>
-            <Activity size={16} />
-          </div>
-          <div className="font-numeric font-bold text-2xl md:text-3xl text-ivory-white">
-            <IndianRupee size={20} className="stroke-[2.5] inline mr-0.5" />
-            {cycle.totalSpent.toLocaleString('en-IN')}
-          </div>
-        </div>
-
-        {/* Daily Streak */}
-        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-3">
-          <div className="flex items-center justify-between text-slate-gray">
-            <span className="text-xs font-medium">Daily Streak</span>
-            <Flame size={16} className="text-rupee-gold" />
-          </div>
-          <div className="font-numeric font-bold text-2xl md:text-3xl text-rupee-gold">
-            {streak}
           </div>
         </div>
       </section>
 
-      {/* Recharts Grid - Retained */}
+      {/* CHARTS CONTAINER */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-        {/* Category breakdown (Pie Chart) */}
-        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 md:p-6 space-y-4">
+        
+        {/* Category Breakdown */}
+        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 md:p-6 flex flex-col justify-between space-y-4 shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-gray/5 pb-2">
             <h3 className="font-display font-semibold text-sm md:text-base text-ivory-white flex items-center gap-2">
               <PieIcon size={16} className="text-mint-cash" />
@@ -367,7 +321,7 @@ export default function DashboardPage() {
             <span className="text-[10px] text-slate-gray font-medium">Calendar Month</span>
           </div>
 
-          <div className="h-64 flex items-center justify-center">
+          <div className="h-60 flex items-center justify-center">
             {isMounted && charts.categoriesBreakdown.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -375,72 +329,61 @@ export default function DashboardPage() {
                     data={charts.categoriesBreakdown}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={2}
+                    innerRadius={65}
+                    outerRadius={85}
+                    paddingAngle={3}
                     dataKey="value"
                   >
                     {charts.categoriesBreakdown.map((entry: any, index: number) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={CATEGORY_COLORS[entry.name] || '#94A3B8'}
-                      />
+                      <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.name] || '#64748B'} />
                     ))}
                   </Pie>
                   <Tooltip
                     contentStyle={{
                       backgroundColor: '#FFFFFF',
-                      border: '1px solid rgba(107, 107, 99, 0.15)',
+                      border: '1px solid #E2E8F0',
                       borderRadius: '8px',
-                      fontFamily: 'var(--font-sans)',
+                      fontFamily: 'sans-serif',
                       fontSize: '11px',
-                      color: '#1C1C1A',
                     }}
-                    itemStyle={{ color: '#1C1C1A' }}
-                    formatter={(value) => [value ? `₹${Number(value).toLocaleString('en-IN')}` : '₹0', 'Spent']}
+                    itemStyle={{ color: '#1E293B' }}
+                    formatter={(value) => [`₹${Number(value).toLocaleString('en-IN')}`, 'Spent']}
                   />
                   <Legend
                     layout="horizontal"
                     verticalAlign="bottom"
                     align="center"
-                    iconSize={8}
+                    iconSize={6}
                     iconType="circle"
                     formatter={(value) => (
-                      <span className="text-[10px] text-ivory-white font-medium px-1.5">{value}</span>
+                      <span className="text-[10px] text-slate-gray font-medium px-1">{value}</span>
                     )}
                   />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
               <div className="text-xs text-slate-gray flex flex-col items-center gap-2">
-                <Activity size={24} className="text-slate-gray/30" />
+                <Activity size={24} className="text-slate-gray" />
                 <span>No expense categories logged this month.</span>
               </div>
             )}
           </div>
 
-          {/* Smart Insight */}
-          {charts.categoriesBreakdown.length > 0 && (
-            <div className="pt-3 border-t border-slate-gray/5">
-              <div className="bg-mint-cash/10 border border-mint-cash/20 rounded-lg p-3">
-                <p className="text-[11px] text-ivory-white leading-relaxed font-medium">
-                  <span className="text-rupee-gold">💡</span>{' '}
-                  {summary.largestCategory.category === 'Food' || summary.largestCategory.category === 'Shopping'
-                    ? `You spend ${Math.round((summary.largestCategory.amount / stats.recap.thisMonthSpent) * 100)}% on ${summary.largestCategory.category}. Setting a specific budget for this category could help control discretionary spending.`
-                    : summary.largestCategory.category === 'EMI' || summary.largestCategory.category === 'Rent'
-                    ? `Fixed obligations (${summary.largestCategory.category}) account for ${Math.round((summary.largestCategory.amount / stats.recap.thisMonthSpent) * 100)}% of your spending. This is typical for essential expenses.`
-                    : summary.largestCategory.category === 'Transport' || summary.largestCategory.category === 'Data/Recharge'
-                    ? `Your ${summary.largestCategory.category} spending is ${Math.round((summary.largestCategory.amount / stats.recap.thisMonthSpent) * 100)}% of your total. Consider if this aligns with your commute and connectivity needs.`
-                    : `Your highest spending category is ${summary.largestCategory.category} at ${Math.round((summary.largestCategory.amount / stats.recap.thisMonthSpent) * 100)}% of total spending.`
-                  }
-                </p>
+          {/* Dynamic Smart Insight Feature */}
+          {summary.largestCategory?.amount > 0 && (
+            <div className="flex items-start gap-3 bg-card-fill border border-slate-gray/5 rounded-xl p-3.5 text-xs text-slate-gray mt-2">
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-rupee-gold/10 text-rupee-gold shrink-0 mt-0.5">
+                <Sparkles size={13} />
               </div>
+              <p className="leading-relaxed">
+                <strong className="text-ivory-white font-semibold">Smart Insight:</strong> Your highest single outflow node this cycle is <span className="text-ivory-white font-medium">{summary.largestCategory.category}</span>, consuming <span className="text-rupee-gold font-bold">₹{summary.largestCategory.amount.toLocaleString('en-IN')}</span> of your total parsed ledger records.
+              </p>
             </div>
           )}
         </div>
 
-        {/* 6-Month Trend (Area Chart) */}
-        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 md:p-6 space-y-4">
+        {/* Historic Ledger Area Chart */}
+        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 md:p-6 space-y-4 shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-gray/5 pb-2">
             <h3 className="font-display font-semibold text-sm md:text-base text-ivory-white flex items-center gap-2">
               <TrendingUp size={16} className="text-mint-cash" />
@@ -452,26 +395,17 @@ export default function DashboardPage() {
           <div className="h-64">
             {isMounted ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={charts.trend}
-                  margin={{ top: 10, right: 5, left: -20, bottom: 0 }}
-                >
+                <AreaChart data={charts.trend} margin={{ top: 10, right: 5, left: -22, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorSpent" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#1B4332" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#1B4332" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#05D393" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#05D393" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(107, 107, 99, 0.05)" />
-                  <XAxis
-                    dataKey="month"
-                    stroke="#6B6B63"
-                    fontSize={10}
-                    tickLine={false}
-                    axisLine={false}
-                  />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.05)" />
+                  <XAxis dataKey="month" stroke="#94A3B8" fontSize={10} tickLine={false} axisLine={false} />
                   <YAxis
-                    stroke="#6B6B63"
+                    stroke="#94A3B8"
                     fontSize={10}
                     tickLine={false}
                     axisLine={false}
@@ -480,39 +414,25 @@ export default function DashboardPage() {
                   <Tooltip
                     contentStyle={{
                       backgroundColor: '#FFFFFF',
-                      border: '1px solid rgba(107, 107, 99, 0.15)',
+                      border: '1px solid #E2E8F0',
                       borderRadius: '8px',
-                      fontFamily: 'var(--font-sans)',
-                      fontSize: '11px',
                     }}
-                    itemStyle={{ color: '#1C1C1A' }}
-                    labelStyle={{ color: '#6B6B63', fontWeight: 'bold' }}
-                    formatter={(value) => [value ? `₹${Number(value).toLocaleString('en-IN')}` : '₹0']}
+                    itemStyle={{ color: '#1E293B' }}
+                    labelStyle={{ color: '#64748B', fontWeight: 'bold' }}
+                    formatter={(value) => [`₹${Number(value).toLocaleString('en-IN')}`]}
                   />
                   <Legend
                     verticalAlign="bottom"
                     height={36}
-                    iconSize={8}
+                    iconSize={6}
                     formatter={(value) => (
-                      <span className="text-[10px] text-ivory-white font-medium px-1">{value === 'spent' ? 'Spent' : 'Budget Limit'}</span>
+                      <span className="text-[10px] text-slate-gray font-medium px-1">
+                        {value === 'spent' ? 'Spent' : 'Limit Target'}
+                      </span>
                     )}
                   />
-                  <Area
-                    type="monotone"
-                    dataKey="spent"
-                    stroke="#1B4332"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorSpent)"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="budget"
-                    stroke="#6B6B63"
-                    strokeWidth={1.5}
-                    strokeDasharray="4 4"
-                    fill="none"
-                  />
+                  <Area type="monotone" dataKey="spent" stroke="#05D393" strokeWidth={2.5} fillOpacity={1} fill="url(#colorSpent)" />
+                  <Area type="monotone" dataKey="budget" stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4 4" fill="none" />
                 </AreaChart>
               </ResponsiveContainer>
             ) : null}
@@ -520,40 +440,46 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Recent Transactions */}
-      <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 md:p-6 space-y-4">
+      {/* RECENT LEDGER ENTRIES */}
+      <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 md:p-6 space-y-4 shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-gray/5 pb-2">
           <h3 className="font-display font-semibold text-sm md:text-base text-ivory-white">
-            Recent Transactions
+            Recent Ledger Rows
           </h3>
           <Link
             href="/expenses"
-            className="text-xs text-mint-cash hover:underline flex items-center gap-1 font-semibold"
+            className="text-xs text-mint-cash hover:opacity-80 flex items-center gap-1 font-semibold transition-colors"
           >
-            <span>View All</span>
+            <span>View Ledger</span>
             <ArrowRight size={14} />
           </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           {recentLedger.length === 0 ? (
-            <div className="col-span-2 text-center py-6 text-xs text-slate-gray">
-              No transactions logged yet. Use the Quick Log button to record your first expense!
+            <div className="col-span-2 text-center py-8 text-xs text-slate-gray bg-card-fill border border-dashed border-slate-gray/10 rounded-lg">
+              No transactions logged yet.
             </div>
           ) : (
             recentLedger.map((tx: any) => (
               <div
                 key={tx._id}
-                className="flex items-center justify-between p-3.5 rounded-lg bg-bg-deep/45 border border-slate-gray/5 hover:border-slate-gray/10 transition-all"
+                className="flex items-center justify-between p-3.5 rounded-xl bg-card-fill border border-slate-gray/5 hover:border-slate-gray/10 transition-all duration-200"
               >
-                <div className="min-w-0 pr-3 space-y-1">
+                <div className="min-w-0 pr-3 space-y-1.5">
                   <div className="flex items-center gap-2">
-                    <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-medium text-[9px] shrink-0">
+                    <span 
+                      className="px-2 py-0.5 rounded text-[9px] font-semibold"
+                      style={{ 
+                        backgroundColor: `${CATEGORY_COLORS[tx.category] || '#64748B'}15`, 
+                        color: CATEGORY_COLORS[tx.category] || '#64748B' 
+                      }}
+                    >
                       {tx.category}
                     </span>
                     {tx.isRecurring && (
-                      <span className="text-[7.5px] bg-rupee-gold/15 text-rupee-gold font-bold px-1.5 py-0.5 rounded uppercase tracking-wide shrink-0">
-                        Recurring
+                      <span className="text-[8px] bg-card-fill text-rupee-gold font-bold px-1.5 py-0.5 rounded tracking-wide uppercase border border-slate-gray/10">
+                        Fixed
                       </span>
                     )}
                   </div>
@@ -569,8 +495,8 @@ export default function DashboardPage() {
                   </p>
                 </div>
 
-                <div className="font-numeric font-bold text-xs text-ivory-white flex items-center shrink-0">
-                  <IndianRupee size={11} className="stroke-[2.5]" />
+                <div className="font-numeric font-bold text-sm text-ivory-white flex items-center shrink-0">
+                  <IndianRupee size={12} className="stroke-[2.5] mr-0.5 text-slate-gray" />
                   {tx.amount.toLocaleString('en-IN')}
                 </div>
               </div>

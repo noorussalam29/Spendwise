@@ -202,7 +202,7 @@ export default function NewExpensePage() {
         <div className="border-t border-slate-gray/10 pt-4 space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <label className="text-xs font-semibold text-ivory-white">
+              <label htmlFor="isRecurring" className="text-xs font-semibold text-ivory-white cursor-pointer">
                 Recurring Transaction
               </label>
               <p className="text-[11px] text-slate-gray">
@@ -266,12 +266,12 @@ export default function NewExpensePage() {
             {mutation.isPending ? (
               <>
                 <Loader2 size={16} className="animate-spin" />
-                Logging...
+                <span>Logging...</span>
               </>
             ) : (
               <>
                 <Save size={16} />
-                Log Outflow
+                <span>Log Outflow</span>
               </>
             )}
           </button>

@@ -40,7 +40,7 @@ export async function GET(req: Request) {
       const [year, monthVal, dayVal] = dateParam.split('-').map(Number);
       startOfPeriod = new Date(Date.UTC(year, monthVal - 1, dayVal, 0, 0, 0, 0));
       endOfPeriod = new Date(Date.UTC(year, monthVal - 1, dayVal, 23, 59, 59, 999));
-      filenamePart = dateParam;
+      filenamePart = `day-${dateParam}`;
     } else if (month) {
       if (!/^\d{4}-\d{2}$/.test(month)) {
         return new Response(`Invalid month format received: "${month}". Expected YYYY-MM`, { status: 400 });
@@ -48,7 +48,7 @@ export async function GET(req: Request) {
       const [year, monthStr] = month.split('-').map(Number);
       startOfPeriod = new Date(Date.UTC(year, monthStr - 1, 1, 0, 0, 0, 0));
       endOfPeriod = new Date(Date.UTC(year, monthStr, 0, 23, 59, 59, 999));
-      filenamePart = month;
+      filenamePart = `month-${month}`;
     } else {
       return new Response('Missing parameters: Either "month" (YYYY-MM) or "date" (YYYY-MM-DD) query parameter is required.', { status: 400 });
     }

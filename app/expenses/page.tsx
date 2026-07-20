@@ -3,7 +3,7 @@
 import { useMemo, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { IndianRupee, Plus, Search, Calendar, Filter, Edit2, Trash2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { IndianRupee, Plus, Search, Filter, Edit2, Trash2, Loader2, ChevronLeft, ChevronRight, AlertTriangle, Calendar } from 'lucide-react';
 import { IExpense } from '@/types';
 
 // Helper to format date in a premium human-readable way
@@ -20,11 +20,9 @@ const formatGroupLabel = (dateString: string | Date) => {
   const d = new Date(dateString);
   const today = new Date();
   
-  // Set up Yesterday
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
 
-  // Set up Day Before Yesterday
   const dayBeforeYesterday = new Date();
   dayBeforeYesterday.setDate(today.getDate() - 2);
 
@@ -77,6 +75,12 @@ export default function ExpensesPage() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
   
+  // Track segment active state styling toggle ('today' | 'this-month' | 'last-month' | null)
+  const [activeSegment, setActiveSegment] = useState<'today' | 'this-month' | 'last-month' | null>('this-month');
+
+  // Custom Delete Modal State
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+
   // Default month filter to current year-month
   const [month, setMonth] = useState<string>(() => {
     const now = new Date();
@@ -124,17 +128,18 @@ export default function ExpensesPage() {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      setDeleteTarget(null);
     },
   });
 
-  const handleDelete = (id: string, event: React.MouseEvent) => {
-    event.stopPropagation(); // Prevents layout from toggling to day-view
-    if (confirm('Are you sure you want to delete this expense?')) {
-      deleteMutation.mutate(id);
+  const confirmDelete = () => {
+    if (deleteTarget) {
+      deleteMutation.mutate(deleteTarget.id);
     }
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
+    setActiveSegment(null);
     const [year, monthNumber] = month.split('-').map(Number);
     const current = new Date(year, monthNumber - 1, 1);
     if (direction === 'prev') {
@@ -146,11 +151,12 @@ export default function ExpensesPage() {
     const nextYear = current.getFullYear();
     const nextMonth = String(current.getMonth() + 1).padStart(2, '0');
     setMonth(`${nextYear}-${nextMonth}`);
-    setSelectedDay(null); // Reset day selection when changing months
+    setSelectedDay(null);
   };
 
   const navigateDay = (direction: 'prev' | 'next') => {
     if (!selectedDay) return;
+    setActiveSegment(null);
     
     const [year, monthVal, day] = selectedDay.split('-').map(Number);
     const current = new Date(year, monthVal - 1, day);
@@ -172,7 +178,6 @@ export default function ExpensesPage() {
     setSelectedDay(`${nextYear}-${nextMonth}-${nextDay}`);
   };
 
-  // Touch handlers for swipe gestures
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.changedTouches[0].screenX;
   };
@@ -211,7 +216,6 @@ export default function ExpensesPage() {
     });
   }, [expenses, month]);
 
-  // Filter by selected day if in day view
   const filteredExpenses = useMemo(() => {
     if (!selectedDay) return selectedMonthExpenses;
     return selectedMonthExpenses.filter((expense) => {
@@ -226,7 +230,7 @@ export default function ExpensesPage() {
   const groupedExpenses = useMemo(() => {
     const groups = new Map<string, IExpense[]>();
 
-    selectedMonthExpenses.forEach((expense) => {
+    filteredExpenses.forEach((expense) => {
       const key = getLocalDateKey(expense.date);
       if (!groups.has(key)) {
         groups.set(key, []);
@@ -253,38 +257,232 @@ export default function ExpensesPage() {
         };
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [selectedMonthExpenses]);
+  }, [filteredExpenses]);
 
   const today = new Date();
   const currentMonthLabel = formatMonthLabel(month);
   const isCurrentMonth = month === `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 
   return (
-    <div className="space-y-6 md:space-y-8 animate-fade-in pb-16">
-      {/* Header section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display font-semibold text-2xl md:text-3xl text-ivory-white tracking-tight">
+    <div className="space-y-6 md:space-y-8 animate-fade-in pb-16 relative">
+      
+      {/* PROFESSIONAL CUSTOM DELETE MODAL */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-bg-deep/60 backdrop-blur-sm"
+            onClick={() => !deleteMutation.isPending && setDeleteTarget(null)}
+          />
+          <div className="relative w-full max-w-md transform overflow-hidden rounded-2xl border border-slate-gray/10 bg-card-fill p-6 shadow-2xl transition-all animate-fade-in space-y-4">
+            <div className="flex items-start gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-crimson-alert/15 text-crimson-alert">
+                <AlertTriangle size={20} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-semibold text-ivory-white">Delete Transaction</h3>
+                <p className="text-xs text-slate-gray leading-relaxed">
+                  Are you sure you want to delete <span className="font-semibold text-ivory-white">"{deleteTarget.title}"</span>? This action is permanent and cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={deleteMutation.isPending}
+                onClick={() => setDeleteTarget(null)}
+                className="h-9 px-4 rounded-lg bg-bg-deep border border-slate-gray/10 text-xs font-semibold text-slate-gray hover:text-ivory-white transition-all disabled:opacity-45"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteMutation.isPending}
+                onClick={confirmDelete}
+                className="h-9 px-4 rounded-lg bg-crimson-alert hover:bg-crimson-alert/90 text-bg-deep text-xs font-bold transition-all flex items-center justify-center gap-1.5 min-w-[80px]"
+              >
+                {deleteMutation.isPending ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <span>Delete</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MOBILE OPTIMIZED HEADER GRID SECTION */}
+      <div className="flex items-center justify-between gap-4 border-b border-slate-gray/5 pb-4">
+        <div className="min-w-0">
+          <h1 className="font-display font-semibold text-2xl md:text-3xl text-ivory-white tracking-tight truncate">
             Expenses Ledger
           </h1>
-          <p className="text-sm text-slate-gray mt-1">
+          <p className="hidden sm:block text-sm text-slate-gray mt-1">
             Track and filter your transactions month-over-month.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center">
           <Link
             href="/expenses/new"
-            className="flex-1 sm:flex-initial h-10 px-5 bg-mint-cash hover:bg-pine-light text-bg-deep rounded-lg flex items-center justify-center gap-2 text-xs font-bold transition-all transform hover:scale-[1.01] active:scale-[0.99] shadow-sm"
+            className="inline-flex h-9 px-4 bg-mint-cash hover:bg-pine-light text-bg-deep rounded-lg items-center justify-center gap-1.5 text-xs font-bold transition-all transform hover:scale-[1.01] active:scale-[0.99] shadow-sm whitespace-nowrap"
           >
             <Plus size={14} className="stroke-[2.5]" />
             <span>Add Expense</span>
           </Link>
         </div>
       </div>
+      <p className="block sm:hidden text-xs text-slate-gray -mt-2">
+        Track and filter your transactions month-over-month.
+      </p>
 
-      {/* Filters Form Dock */}
-      <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-4 md:p-5 grid grid-cols-1 sm:grid-cols-3 gap-4 shadow-sm">
+       {/* FULLY MOBILE RE-ARCHITECTED STICKY CONTROL DOCK */}
+            <div className="sticky top-3 z-30 rounded-xl border border-slate-gray/10 bg-card-fill/95 p-3 shadow-md backdrop-blur-md">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                
+                {/* Upper Deck on Mobile: Date selectors and view bounds */}
+                <div className="flex items-center justify-between gap-2 w-full lg:w-auto">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-0.5 bg-bg-deep p-0.5 rounded-lg border border-slate-gray/10 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => selectedDay ? navigateDay('prev') : navigateMonth('prev')}
+                        aria-label="Previous"
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-slate-gray transition-all duration-200 hover:bg-card-fill hover:text-ivory-white focus-visible:outline-none"
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => selectedDay ? navigateDay('next') : navigateMonth('next')}
+                        disabled={!selectedDay && isCurrentMonth}
+                        aria-label="Next"
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-slate-gray transition-all duration-200 hover:bg-card-fill hover:text-ivory-white disabled:opacity-30 disabled:hover:bg-transparent"
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
+                    
+                    {/* DYNAMIC CLICKABLE TITLE CALENDAR SELECTOR */}
+                    <div className="min-w-0 relative group">
+                      {selectedDay ? (
+                        <h2 className="text-sm font-bold text-ivory-white flex items-center gap-2 truncate">
+                          <span>{formatDate(selectedDay)}</span>
+                          <span className="text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded bg-bg-deep border border-slate-gray/5 font-medium text-slate-gray whitespace-nowrap hidden sm:inline-block">
+                            Day View
+                          </span>
+                        </h2>
+                      ) : (
+                        <div className="relative flex items-center gap-2 cursor-pointer max-w-full">
+                          <label className="text-sm font-bold text-ivory-white group-hover:text-mint-cash transition-colors flex items-center gap-1.5 cursor-pointer truncate">
+                            <span className="truncate">{currentMonthLabel}</span>
+                            <Calendar size={13} className="text-slate-gray/50 group-hover:text-mint-cash transition-colors shrink-0" />
+                          </label>
+                          <span className="text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded bg-bg-deep border border-slate-gray/5 font-medium text-slate-gray whitespace-nowrap hidden sm:inline-block">
+                            Month View
+                          </span>
+                          <input
+                            type="month"
+                            value={month}
+                            onChange={(e) => {
+                              setMonth(e.target.value);
+                              setSelectedDay(null);
+                              setActiveSegment(null);
+                            }}
+                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Context Badge shown specifically on Mobile right alignment */}
+                  <span className="text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded bg-bg-deep border border-slate-gray/5 font-medium text-slate-gray sm:hidden shrink-0">
+                    {selectedDay ? 'Day' : 'Month'}
+                  </span>
+                </div>
+
+                {/* Lower Deck on Mobile: Fluid segment control strip */}
+                <div className="flex items-center gap-2 w-full lg:w-auto">
+                  <div className="flex bg-bg-deep p-0.5 border border-slate-gray/10 rounded-lg h-9 items-center w-full lg:w-auto flex-1 lg:flex-initial">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const now = new Date();
+                        const yyyy = now.getFullYear();
+                        const mm = String(now.getMonth() + 1).padStart(2, '0');
+                        const dd = String(now.getDate()).padStart(2, '0');
+                        setMonth(`${yyyy}-${mm}`);
+                        setSelectedDay(`${yyyy}-${mm}-${dd}`);
+                        setActiveSegment('today');
+                      }}
+                      className={`h-7 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all duration-150 flex-1 lg:flex-initial lg:px-4 text-center ${
+                        activeSegment === 'today' 
+                          ? 'bg-mint-cash text-bg-deep shadow-sm font-extrabold' 
+                          : 'text-slate-gray hover:text-ivory-white'
+                      }`}
+                    >
+                      Today
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const now = new Date();
+                        const yyyy = now.getFullYear();
+                        const mm = String(now.getMonth() + 1).padStart(2, '0');
+                        setMonth(`${yyyy}-${mm}`);
+                        setSelectedDay(null);
+                        setActiveSegment('this-month');
+                      }}
+                      className={`h-7 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all duration-150 flex-1 lg:flex-initial lg:px-4 text-center ${
+                        activeSegment === 'this-month' 
+                          ? 'bg-mint-cash text-bg-deep shadow-sm font-extrabold' 
+                          : 'text-slate-gray hover:text-ivory-white'
+                      }`}
+                    >
+                      This Month
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const now = new Date();
+                        const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                        const yyyy = prevMonth.getFullYear();
+                        const mm = String(prevMonth.getMonth() + 1).padStart(2, '0');
+                        setMonth(`${yyyy}-${mm}`);
+                        setSelectedDay(null);
+                        setActiveSegment('last-month');
+                      }}
+                      className={`h-7 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all duration-150 flex-1 lg:flex-initial lg:px-4 text-center ${
+                        activeSegment === 'last-month' 
+                          ? 'bg-mint-cash text-bg-deep shadow-sm font-extrabold' 
+                          : 'text-slate-gray hover:text-ivory-white'
+                      }`}
+                    >
+                      Last Month
+                    </button>
+                  </div>
+
+                  {/* Exit day level button */}
+                  {selectedDay && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedDay(null);
+                        setActiveSegment(null);
+                      }}
+                      className="h-9 rounded-lg border border-slate-gray/10 bg-bg-deep px-3 text-[10px] sm:text-[11px] font-bold text-mint-cash transition-all duration-200 hover:border-mint-cash/30 hover:bg-mint-cash/5 shrink-0"
+                    >
+                      Exit Day
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+      {/* Top Dock (Search & Category filters) */}
+      <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-4 md:p-5 grid grid-cols-1 md:grid-cols-2 gap-4 shadow-sm items-center">
         {/* Search */}
         <div className="relative">
           <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-gray/45" />
@@ -317,64 +515,11 @@ export default function ExpensesPage() {
             <option value="Other">Other</option>
           </select>
         </div>
-
-        {/* Month Filter */}
-        <div className="relative">
-          <Calendar size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-gray/45" />
-          <input
-            type="month"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="w-full bg-bg-deep border border-slate-gray/10 rounded-lg pl-9 pr-4 py-2.5 text-xs text-ivory-white focus-ring cursor-pointer"
-          />
-        </div>
       </section>
 
-      {/* Quick Date Filters */}
-      <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-4 md:p-5">
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => {
-              const now = new Date();
-              const yyyy = now.getFullYear();
-              const mm = String(now.getMonth() + 1).padStart(2, '0');
-              const dd = String(now.getDate()).padStart(2, '0');
-              setMonth(`${yyyy}-${mm}`);
-              setSelectedDay(`${yyyy}-${mm}-${dd}`);
-            }}
-            className="h-8 px-3 rounded-lg border border-slate-gray/10 bg-bg-deep text-[10px] font-semibold text-slate-gray transition-all duration-200 hover:border-mint-cash/30 hover:text-ivory-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-cash/40"
-          >
-           Today
-          </button>
-          <button
-            onClick={() => {
-              const now = new Date();
-              const yyyy = now.getFullYear();
-              const mm = String(now.getMonth() + 1).padStart(2, '0');
-              setMonth(`${yyyy}-${mm}`);
-              setSelectedDay(null);
-            }}
-            className="h-8 px-3 rounded-lg border border-slate-gray/10 bg-bg-deep text-[10px] font-semibold text-slate-gray transition-all duration-200 hover:border-mint-cash/30 hover:text-ivory-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-cash/40"
-          >
-            This Month
-          </button>
-          <button
-            onClick={() => {
-              const now = new Date();
-              const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-              const yyyy = prevMonth.getFullYear();
-              const mm = String(prevMonth.getMonth() + 1).padStart(2, '0');
-              setMonth(`${yyyy}-${mm}`);
-              setSelectedDay(null);
-            }}
-            className="h-8 px-3 rounded-lg border border-slate-gray/10 bg-bg-deep text-[10px] font-semibold text-slate-gray transition-all duration-200 hover:border-mint-cash/30 hover:text-ivory-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mint-cash/40"
-          >
-            Last Month
-          </button>
-        </div>
-      </section>
+      
 
-      {/* Summary Stats for Selected Period */}
+      {/* Summary Stats */}
       {!isLoading && filteredExpenses.length > 0 && (
         <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-4 md:p-5">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -410,7 +555,7 @@ export default function ExpensesPage() {
               <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase">
                 Top Category
               </span>
-              <div className="text-sm md:text-base font-semibold text-ivory-white">
+              <div className="text-sm md:text-base font-semibold text-ivory-white truncate">
                 {(() => {
                   const categoryTotals = filteredExpenses.reduce((acc, exp) => {
                     acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
@@ -425,8 +570,12 @@ export default function ExpensesPage() {
         </section>
       )}
 
-      {/* Ledger contents */}
-      <section className="space-y-4">
+      {/* Ledger contents - TOUCH SWIPE CAPABLE CONTAINER */}
+      <section 
+        className="space-y-4"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {isLoading ? (
           <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-12 flex flex-col items-center justify-center gap-3 shadow-sm">
             <Loader2 size={32} className="animate-spin text-mint-cash" />
@@ -438,64 +587,8 @@ export default function ExpensesPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="sticky top-3 z-20 rounded-xl border border-slate-gray/10 bg-card-fill/95 px-3 py-3 shadow-sm backdrop-blur-sm"
-                 onTouchStart={handleTouchStart}
-                 onTouchEnd={handleTouchEnd}>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => selectedDay ? navigateDay('prev') : navigateMonth('prev')}
-                    aria-label="Previous"
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-gray/10 bg-bg-deep text-slate-gray transition-all duration-200 hover:border-mint-cash/30 hover:text-ivory-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-mint-cash"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-                  <div className="min-w-0">
-                    <h2 className="text-sm font-semibold text-ivory-white">
-                      {selectedDay ? formatDate(selectedDay) : currentMonthLabel}
-                    </h2>
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-gray font-medium">
-                      {selectedDay ? 'Day View' : 'Month View'}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => selectedDay ? navigateDay('next') : navigateMonth('next')}
-                    disabled={!selectedDay && isCurrentMonth}
-                    aria-label="Next"
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-gray/10 bg-bg-deep text-slate-gray transition-all duration-200 hover:border-mint-cash/30 hover:text-ivory-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-gray/10 disabled:hover:text-slate-gray focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-mint-cash"
-                  >
-                    <ChevronRight size={18} />
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const now = new Date();
-                      const yyyy = now.getFullYear();
-                      const mm = String(now.getMonth() + 1).padStart(2, '0');
-                      setMonth(`${yyyy}-${mm}`);
-                      setSelectedDay(null);
-                    }}
-                    className="h-9 rounded-lg border border-slate-gray/10 bg-bg-deep px-3 text-[11px] font-semibold text-slate-gray transition-all duration-200 hover:border-mint-cash/30 hover:text-ivory-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-mint-cash"
-                  >
-                    Current Month
-                  </button>
-                  {selectedDay && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedDay(null)}
-                      className="h-9 rounded-lg border border-slate-gray/10 bg-bg-deep px-3 text-[11px] font-semibold text-slate-gray transition-all duration-200 hover:border-mint-cash/30 hover:text-ivory-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-mint-cash"
-                    >
-                      Month View
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
+            
+           
 
             {filteredExpenses.length === 0 ? (
               <div className="rounded-xl border border-slate-gray/10 bg-card-fill p-10 text-center shadow-sm transition-all duration-200">
@@ -523,13 +616,26 @@ export default function ExpensesPage() {
                 {groupedExpenses.map((group) => (
                   <div
                     key={group.key}
-                    className="rounded-xl border border-slate-gray/10 bg-card-fill p-3 shadow-sm transition-all duration-200 hover:border-slate-gray/30 sm:p-4 cursor-pointer"
-                    onClick={() => !selectedDay && setSelectedDay(group.key)}
+                    className="rounded-xl border border-slate-gray/10 bg-card-fill p-3 shadow-sm transition-all duration-200 hover:border-slate-gray/30 sm:p-4"
                   >
                     <div className="mb-3 flex items-center justify-between border-b border-slate-gray/5 pb-2.5">
-                      <h3 className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-gray">
-                        {group.label}
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-gray">
+                          {group.label}
+                        </h3>
+                        {!selectedDay && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedDay(group.key);
+                              setActiveSegment(null);
+                            }}
+                            className="rounded bg-bg-deep px-2 py-0.5 text-[9px] font-bold text-mint-cash border border-slate-gray/5 hover:border-mint-cash/20 transition-all duration-150"
+                          >
+                            View Day
+                          </button>
+                        )}
+                      </div>
                       <div className="font-numeric text-sm font-semibold text-ivory-white">
                         <span className="mr-1.5 text-[10px] text-slate-gray font-sans font-normal uppercase tracking-wider">Total</span>
                         <span className="inline-flex items-center gap-0.5">
@@ -573,16 +679,17 @@ export default function ExpensesPage() {
                             </div>
                             <div className="flex items-center gap-2">
                               <Link
-                                href={`/expenses/${expense._id}`}
+                                href={`/expenses/${expense._id}/edit`}
                                 aria-label={`Edit ${expense.title}`}
-                                onClick={(e) => e.stopPropagation()} // Stop switching views on click
                                 className="rounded-md p-1.5 text-slate-gray transition-all duration-200 hover:bg-bg-deep hover:text-ivory-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-mint-cash"
                               >
                                 <Edit2 size={12} />
                               </Link>
                               <button
                                 type="button"
-                                onClick={(e) => handleDelete(expense._id, e)} // Stop switching views on click
+                                onClick={() => {
+                                  setDeleteTarget({ id: expense._id, title: expense.title });
+                                }}
                                 aria-label={`Delete ${expense.title}`}
                                 className="rounded-md p-1.5 text-slate-gray transition-all duration-200 hover:bg-crimson-alert/10 hover:text-crimson-alert focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-crimson-alert"
                               >
