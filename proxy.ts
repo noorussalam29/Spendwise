@@ -22,7 +22,7 @@ export default withAuth(
         if (
           path === '/login' ||
           path === '/register' ||
-          path.startsWith('/api/auth/register') ||
+          path.startsWith('/api/auth') ||
           path.startsWith('/_next') ||
           path.includes('.')
         ) {
@@ -40,11 +40,12 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for:
-     * - api/auth/register (registration API)
+     * - api/auth/* (all NextAuth API routes)
      * - _next/static (Next.js static assets)
      * - _next/image (Next.js image helper)
      * - favicon.ico (Site icon)
+     * - static asset files with extension
      */
-    '/((?!api/auth/register|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)',
   ],
 };

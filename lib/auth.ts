@@ -58,21 +58,6 @@ export const authOptions: NextAuthOptions = {
         if (session.name !== undefined) token.name = session.name;
       }
 
-      // Re-fetch user data from database on token refresh to get latest values
-      if (token.id && !user) {
-        try {
-          await dbConnect();
-          const dbUser = await User.findById(token.id);
-          if (dbUser) {
-            token.payday = dbUser.payday;
-            token.currentStreak = dbUser.currentStreak;
-            token.name = dbUser.name;
-          }
-        } catch (error) {
-          console.error('Error fetching user data in JWT callback:', error);
-        }
-      }
-
       return token;
     },
     async session({ session, token }) {

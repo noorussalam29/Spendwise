@@ -48,14 +48,37 @@ function LoginForm() {
         callbackUrl,
       });
 
-      if (result?.error) {
-        setError(result.error);
+      if (!result) {
+        setError('Authentication request failed. Please try again.');
         setLoading(false);
-      } else {
-        router.push(callbackUrl);
-        router.refresh();
+        return;
+      }
+
+      if (result.error) {
+        setError(
+          result.error === 'CredentialsSignin'
+            ? 'Invalid credentials. Please try again.'
+            : result.error
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (!result.url) {
+        setError('Sign in succeeded, but no redirect URL was returned.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        await router.replace(result.url);
+      } catch (navError) {
+        console.error('Navigation error during sign in:', navError);
+        setError('Failed to redirect after sign in. Please try again.');
+        setLoading(false);
       }
     } catch (err) {
+      console.error('Sign in exception:', err);
       setError('An unexpected error occurred. Please try again.');
       setLoading(false);
     }
