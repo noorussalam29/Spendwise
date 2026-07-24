@@ -49,6 +49,7 @@ export default function ReportsPage() {
   });
   const [expenses, setExpenses] = useState<IExpense[]>([]);
   const [budgets, setBudgets] = useState<any[]>([]);
+  const [monthlyIncome, setMonthlyIncome] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [exportLoading, setExportLoading] = useState<{ csv: boolean; pdf: boolean }>({ csv: false, pdf: false });
 
@@ -70,9 +71,10 @@ export default function ReportsPage() {
     try {
       const monthKey = period === 'month' ? date : date.substring(0, 7);
       
-      const [expensesRes, budgetsRes] = await Promise.all([
+      const [expensesRes, budgetsRes, incomeRes] = await Promise.all([
         fetch(`/api/expenses?month=${monthKey}`),
-        fetch(`/api/budgets?month=${monthKey}`)
+        fetch(`/api/budgets?month=${monthKey}`),
+        fetch(`/api/income?month=${monthKey}`)
       ]);
 
       if (expensesRes.ok) {
@@ -86,6 +88,11 @@ export default function ReportsPage() {
       if (budgetsRes.ok) {
         const budgetsData = await budgetsRes.json();
         setBudgets(budgetsData);
+      }
+
+      if (incomeRes.ok) {
+        const incomeData = await incomeRes.json();
+        setMonthlyIncome(incomeData.monthlyIncome ?? 0);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -156,9 +163,7 @@ export default function ReportsPage() {
   const hasData = expenses.length > 0;
 
   const calculateFinancialSummary = (): FinancialSummary => {
-    const totalIncome = expenses
-      .filter(e => e.category === 'Savings')
-      .reduce((sum, e) => sum + e.amount, 0);
+    const totalIncome = monthlyIncome;
     
     const totalExpenses = expenses
       .filter(e => e.category !== 'Savings')
@@ -248,13 +253,21 @@ export default function ReportsPage() {
 
   const LoadingSkeleton = () => (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="bg-card-fill border border-slate-gray/10 rounded-xl p-4">
-            <div className="h-3 bg-slate-gray/20 rounded mb-2 w-16" />
-            <div className="h-5 bg-slate-gray/20 rounded w-20" />
-          </div>
-        ))}
+      <div className={`grid gap-3 ${period === 'month' ? 'grid-cols-2 lg:grid-cols-5' : 'grid-cols-2 lg:grid-cols-3'}`}>
+        {period === 'month' 
+          ? [1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="bg-card-fill border border-slate-gray/10 rounded-xl p-4">
+                <div className="h-3 bg-slate-gray/20 rounded mb-2 w-16" />
+                <div className="h-5 bg-slate-gray/20 rounded w-20" />
+              </div>
+            ))
+          : [1, 2, 3].map((i) => (
+              <div key={i} className="bg-card-fill border border-slate-gray/10 rounded-xl p-4">
+                <div className="h-3 bg-slate-gray/20 rounded mb-2 w-16" />
+                <div className="h-5 bg-slate-gray/20 rounded w-20" />
+              </div>
+            ))
+        }
       </div>
       <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-6 h-32">
         <div className="h-3 bg-slate-gray/20 rounded mb-3 w-24" />
@@ -445,28 +458,32 @@ export default function ReportsPage() {
         <>
           <section>
             <h3 className="font-semibold text-sm text-ivory-white mb-3">Financial Summary</h3>
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-              <FinancialSummaryCard
-                icon={<TrendingUp size={18} />}
-                label="Total Income"
-                value={`₹${summary.totalIncome.toLocaleString('en-IN')}`}
-                color="text-mint-cash"
-                bgColor="bg-mint-cash/10"
-              />
+            <div className={`grid gap-3 ${period === 'month' ? 'grid-cols-2 lg:grid-cols-5' : 'grid-cols-2 lg:grid-cols-3'}`}>
+              {period === 'month' && (
+                <>
+                  <FinancialSummaryCard
+                    icon={<TrendingUp size={18} />}
+                    label="Total Income"
+                    value={`₹${summary.totalIncome.toLocaleString('en-IN')}`}
+                    color="text-mint-cash"
+                    bgColor="bg-mint-cash/10"
+                  />
+                  <FinancialSummaryCard
+                    icon={<Wallet size={18} />}
+                    label="Net Savings"
+                    value={`₹${summary.netSavings.toLocaleString('en-IN')}`}
+                    trend={summary.netSavings >= 0 ? 'up' : 'down'}
+                    color={summary.netSavings >= 0 ? 'text-mint-cash' : 'text-crimson-alert'}
+                    bgColor={summary.netSavings >= 0 ? 'bg-mint-cash/10' : 'bg-crimson-alert/10'}
+                  />
+                </>
+              )}
               <FinancialSummaryCard
                 icon={<TrendingDown size={18} />}
                 label="Total Expenses"
                 value={`₹${summary.totalExpenses.toLocaleString('en-IN')}`}
                 color="text-crimson-alert"
                 bgColor="bg-crimson-alert/10"
-              />
-              <FinancialSummaryCard
-                icon={<Wallet size={18} />}
-                label="Net Savings"
-                value={`₹${summary.netSavings.toLocaleString('en-IN')}`}
-                trend={summary.netSavings >= 0 ? 'up' : 'down'}
-                color={summary.netSavings >= 0 ? 'text-mint-cash' : 'text-crimson-alert'}
-                bgColor={summary.netSavings >= 0 ? 'bg-mint-cash/10' : 'bg-crimson-alert/10'}
               />
               <FinancialSummaryCard
                 icon={<PieChart size={18} />}
@@ -477,7 +494,7 @@ export default function ReportsPage() {
               />
               <FinancialSummaryCard
                 icon={<Calendar size={18} />}
-                label="Avg. Daily Spend"
+                label={period === 'day' ? "Today's Spend" : "Avg. Daily Spend"}
                 value={`₹${summary.avgDailySpend.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
                 color="text-slate-gray"
                 bgColor="bg-slate-gray/10"

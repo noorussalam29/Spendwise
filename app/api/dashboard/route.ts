@@ -6,6 +6,7 @@ import Expense from '@/models/Expense';
 import Budget from '@/models/Budget';
 import User from '@/models/User';
 import { checkAndGenerateRecurringExpenses } from '@/lib/recurring';
+import { getMonthlyIncome } from '@/lib/income';
 
 // Helper to calculate start and end dates of the current billing cycle based on user's payday
 function getBillingCycle(payday: number, today: Date = new Date()) {
@@ -62,8 +63,12 @@ export async function GET() {
     const currentMonth = today.getMonth();
     const currentMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
 
+    const incomeRecord = await getMonthlyIncome(userId, currentMonthStr);
+    const monthlyIncome = incomeRecord.monthlyIncome;
+    const cyclePayday = incomeRecord.payday ?? user.payday;
+
     // 1. Calculate Billing Cycle Dates
-    const { startCycle, endCycle } = getBillingCycle(user.payday, today);
+    const { startCycle, endCycle } = getBillingCycle(cyclePayday, today);
 
     // Calculate elapsed and remaining days
     const totalCycleTime = endCycle.getTime() - startCycle.getTime();
@@ -83,8 +88,20 @@ export async function GET() {
 
     const totalSpentInCycle = cycleExpenses.reduce((sum, exp) => sum + exp.amount, 0);
 
+    // 3. Fetch budgets for the current calendar month (needed for capped category calculation)
+    const budgets = await Budget.find({
+      userId,
+      month: currentMonthStr,
+    });
+
+    // Calculate spent for capped categories only (for budget percentage calculation)
+    const cappedCategories = budgets.filter(b => b.monthlyLimit != null && b.monthlyLimit > 0).map(b => b.category);
+    const cappedSpentInCycle = cycleExpenses
+      .filter(exp => cappedCategories.includes(exp.category))
+      .reduce((sum, exp) => sum + exp.amount, 0);
+
     // Calculate Money Left = Monthly Income - Current Billing Cycle Spending
-    const moneyLeft = Math.max(0, user.monthlyIncome - totalSpentInCycle);
+    const moneyLeft = Math.max(0, monthlyIncome - totalSpentInCycle);
 
     // Calculate Sent To Family (Family Support category in current cycle)
     const familySupportExpenses = cycleExpenses.filter(exp => exp.category === 'Family Support');
@@ -94,13 +111,14 @@ export async function GET() {
     const savingsExpenses = cycleExpenses.filter(exp => exp.category === 'Savings');
     const savedThisMonth = savingsExpenses.reduce((sum, exp) => sum + exp.amount, 0);
 
-    // 3. Fetch budgets for the current calendar month
-    const budgets = await Budget.find({
-      userId,
-      month: currentMonthStr,
-    });
-
-    const categoryBudgetTotal = budgets.reduce((sum, b) => sum + b.monthlyLimit, 0);
+    // Only sum budgets where a limit is explicitly set (capped categories)
+    const categoryBudgetTotal = budgets.reduce((sum, b) => {
+      // Only include categories with a non-zero, non-null limit
+      if (b.monthlyLimit != null && b.monthlyLimit > 0) {
+        return sum + b.monthlyLimit;
+      }
+      return sum;
+    }, 0);
     
     // Use user's monthly budget if set, otherwise fall back to category budgets
     const totalBudgetLimit = user.monthlyBudget > 0 ? user.monthlyBudget : categoryBudgetTotal;
@@ -166,9 +184,14 @@ export async function GET() {
       });
       const monthSpent = monthExpenses.reduce((sum, exp) => sum + exp.amount, 0);
 
-      // Sum budget for that month
+      // Sum budget for that month (only capped categories)
       const monthBudgets = await Budget.find({ userId, month: tMonthStr });
-      const monthBudgetTotal = monthBudgets.reduce((sum, b) => sum + b.monthlyLimit, 0);
+      const monthBudgetTotal = monthBudgets.reduce((sum, b) => {
+        if (b.monthlyLimit != null && b.monthlyLimit > 0) {
+          return sum + b.monthlyLimit;
+        }
+        return sum;
+      }, 0);
 
       trendData.push({
         month: tMonthLabel,
@@ -233,13 +256,13 @@ export async function GET() {
     // 8. Pacing Indicator Calculations
     const daysElapsedPercent = Math.min(100, Math.max(0, Math.round((daysElapsed / totalCycleDays) * 100)));
     const budgetSpentPercent = totalBudgetLimit > 0
-      ? Math.min(100, Math.round((totalSpentInCycle / totalBudgetLimit) * 100))
+      ? Math.min(100, Math.round((cappedSpentInCycle / totalBudgetLimit) * 100))
       : 0;
 
     const dailySpendingRate = daysElapsed > 0 ? totalSpentInCycle / daysElapsed : totalSpentInCycle;
     const projectedSpend = dailySpendingRate * totalCycleDays;
     
-    const remainingBudget = Math.max(0, totalBudgetLimit - totalSpentInCycle);
+    const remainingBudget = Math.max(0, totalBudgetLimit - cappedSpentInCycle);
     // Safe To Spend Today = Money Left ÷ Remaining Days Until Payday
     const safeToSpendDaily = daysRemaining > 0 ? moneyLeft / daysRemaining : moneyLeft;
 
@@ -247,8 +270,8 @@ export async function GET() {
 
     return NextResponse.json({
       streak: user.currentStreak,
-      payday: user.payday,
-      monthlyIncome: user.monthlyIncome,
+      payday: cyclePayday,
+      monthlyIncome,
       cycle: {
         start: startCycle,
         end: endCycle,
@@ -260,7 +283,7 @@ export async function GET() {
       },
       budget: {
         totalLimit: totalBudgetLimit,
-        usedPercent: totalBudgetLimit > 0 ? Math.round((totalSpentInCycle / totalBudgetLimit) * 100) : 0,
+        usedPercent: totalBudgetLimit > 0 ? Math.round((cappedSpentInCycle / totalBudgetLimit) * 100) : 0,
       },
       stats: {
         todaySpent: totalSpentToday,

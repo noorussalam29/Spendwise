@@ -22,7 +22,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: validationResult.error.issues[0].message }, { status: 400 });
     }
 
-    const { name, payday, monthlyBudget, monthlyIncome, currentPassword, newPassword } = validationResult.data;
+    const { name, monthlyBudget, currentPassword, newPassword } = validationResult.data;
 
     await dbConnect();
 
@@ -53,14 +53,9 @@ export async function PATCH(req: Request) {
       user.name = name;
     }
 
-    // Update payday if provided
-    if (payday !== undefined) {
-      user.payday = payday;
-    }
-
-    // Update monthlyIncome if provided
-    if (monthlyIncome !== undefined) {
-      user.monthlyIncome = monthlyIncome;
+    // Update monthlyBudget if provided
+    if (monthlyBudget !== undefined) {
+      user.monthlyBudget = monthlyBudget;
     }
 
     await user.save();
@@ -70,9 +65,7 @@ export async function PATCH(req: Request) {
       user: {
         name: user.name,
         email: user.email,
-        payday: user.payday,
         monthlyBudget: user.monthlyBudget,
-        monthlyIncome: user.monthlyIncome,
       }
     });
   } catch (error) {

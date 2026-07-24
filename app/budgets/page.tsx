@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useSession } from 'next-auth/react';
 import {
   IndianRupee,
   Calendar,
@@ -13,6 +14,8 @@ import {
   Sparkles,
   ChevronLeft,
   ChevronRight,
+  Wallet,
+  Plus,
 } from 'lucide-react';
 
 // Form input type for editing budget limit
@@ -21,12 +24,25 @@ const budgetEditSchema = z.object({
 });
 type BudgetEditFormValues = z.infer<typeof budgetEditSchema>;
 
+// Form input type for financial preferences
+const financialPrefsSchema = z.object({
+  monthlyIncome: z.number().min(0, 'Monthly income must be positive'),
+  payday: z.number().min(1, 'Payday must be between 1 and 31').max(31, 'Payday must be between 1 and 31'),
+});
+type FinancialPrefsFormValues = z.infer<typeof financialPrefsSchema>;
+
 interface IBudgetSummary {
   category: string;
   limit: number;
   spent: number;
   budgeId: string | null;
   month: string;
+}
+
+interface IMonthlyIncomeResponse {
+  month: string;
+  monthlyIncome: number;
+  payday: number | null;
 }
 
 const formatMonthLabel = (monthValue: string) => {
@@ -40,6 +56,7 @@ const formatMonthLabel = (monthValue: string) => {
 
 export default function BudgetsPage() {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
 
   // Selected Month filter, default to current month
   const [month, setMonth] = useState(() => {
@@ -49,7 +66,7 @@ export default function BudgetsPage() {
 
   // Modal editor states
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
-  const [currentLimitVal, setCurrentLimitVal] = useState<number>(0);
+  const [showFinancialPrefs, setShowFinancialPrefs] = useState(false);
 
   // TanStack Query to fetch budgets
   const { data: budgets = [], isLoading, isError } = useQuery<IBudgetSummary[]>({
@@ -63,15 +80,56 @@ export default function BudgetsPage() {
     },
   });
 
+  // TanStack Query to fetch income for the selected month
+  const {
+    data: incomeData,
+    isLoading: isIncomeLoading,
+    isError: isIncomeError,
+  } = useQuery<IMonthlyIncomeResponse>({
+    queryKey: ['income', month],
+    queryFn: async () => {
+      const response = await fetch(`/api/income?month=${month}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch income');
+      }
+      return response.json();
+    },
+  });
+
   // React Hook Form for budget editor
   const {
-    register,
-    handleSubmit,
-    setValue,
-    formState: { errors },
+    register: registerBudget,
+    handleSubmit: handleSubmitBudget,
+    setValue: setBudgetValue,
+    formState: { errors: budgetErrors },
   } = useForm<BudgetEditFormValues>({
     resolver: zodResolver(budgetEditSchema),
   });
+
+  // React Hook Form for financial preferences
+  const {
+    register: registerFinancial,
+    handleSubmit: handleSubmitFinancial,
+    setValue: setFinancialValue,
+    formState: { errors: financialErrors },
+  } = useForm<FinancialPrefsFormValues>({
+    resolver: zodResolver(financialPrefsSchema),
+    defaultValues: {
+      monthlyIncome: 0,
+      payday: 1,
+    },
+  });
+
+  // Populate the income modal with data for the selected month when opened
+  useEffect(() => {
+    if (showFinancialPrefs && incomeData !== undefined) {
+      setFinancialValue('monthlyIncome', incomeData.monthlyIncome);
+      setFinancialValue(
+        'payday',
+        incomeData.payday ?? (session?.user as any)?.payday ?? 1
+      );
+    }
+  }, [showFinancialPrefs, incomeData, session, setFinancialValue]);
 
   // TanStack Mutation to upsert a budget limit
   const mutation = useMutation({
@@ -101,12 +159,41 @@ export default function BudgetsPage() {
 
   const handleOpenEditModal = (category: string, currentLimit: number) => {
     setEditingCategory(category);
-    setCurrentLimitVal(currentLimit);
-    setValue('monthlyLimit', currentLimit);
+    setBudgetValue('monthlyLimit', currentLimit);
   };
 
-  const onSubmit = (data: BudgetEditFormValues) => {
+  const onSubmitBudget = (data: BudgetEditFormValues) => {
     mutation.mutate(data.monthlyLimit);
+  };
+
+  const incomeMutation = useMutation({
+    mutationFn: async (data: FinancialPrefsFormValues) => {
+      const response = await fetch('/api/income', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          month,
+          monthlyIncome: data.monthlyIncome,
+          payday: data.payday,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update income');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['income', month] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setShowFinancialPrefs(false);
+    },
+  });
+
+  const onSubmitFinancial = (data: FinancialPrefsFormValues) => {
+    incomeMutation.mutate(data);
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -130,6 +217,8 @@ export default function BudgetsPage() {
   });
 
   const currentMonthLabel = formatMonthLabel(month);
+  const statsLoading = isLoading || isIncomeLoading;
+  const monthlyIncome = incomeData?.monthlyIncome ?? 0;
 
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in pb-24 relative">
@@ -143,6 +232,14 @@ export default function BudgetsPage() {
             Set monthly spending limits and track your consumption.
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setShowFinancialPrefs(true)}
+          className="inline-flex h-9 px-4 bg-mint-cash hover:bg-pine-light text-bg-deep rounded-lg items-center justify-center gap-1.5 text-xs font-bold transition-all transform hover:scale-[1.01] active:scale-[0.99] shadow-sm whitespace-nowrap"
+        >
+          <Plus size={14} className="stroke-[2.5]" />
+          <span>Set Income</span>
+        </button>
       </div>
       <p className="block sm:hidden text-xs text-slate-gray -mt-2">
         Set monthly spending limits and track your consumption.
@@ -265,16 +362,27 @@ export default function BudgetsPage() {
       </div>
 
       {/* Budget Summary Stats */}
-      {!isLoading && !isError && budgets.length > 0 && (
+      {statsLoading ? (
         <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-4 md:p-5 shadow-sm">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-5">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="space-y-2">
+                <div className="h-3 bg-slate-gray/20 rounded w-16" />
+                <div className="h-6 bg-slate-gray/15 rounded w-24" />
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : !isError && !isIncomeError && budgets.length > 0 ? (
+        <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-4 md:p-5 shadow-sm">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-5">
             <div className="space-y-1">
               <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase block">
                 Total Budget
               </span>
               <div className="font-numeric font-bold text-lg md:text-xl text-ivory-white flex items-center">
                 <IndianRupee size={16} className="stroke-[2.5] mr-0.5 text-slate-gray" />
-                {budgets.reduce((sum, b) => sum + (b.limit || 0), 0).toLocaleString('en-IN')}
+                {budgets.reduce((sum, b) => sum + (b.limit > 0 ? b.limit : 0), 0).toLocaleString('en-IN')}
               </div>
             </div>
             
@@ -284,7 +392,7 @@ export default function BudgetsPage() {
               </span>
               <div className="font-numeric font-bold text-lg md:text-xl text-ivory-white flex items-center">
                 <IndianRupee size={16} className="stroke-[2.5] mr-0.5 text-slate-gray" />
-                {budgets.reduce((sum, b) => sum + b.spent, 0).toLocaleString('en-IN')}
+                {budgets.reduce((sum, b) => sum + (b.limit > 0 ? b.spent : 0), 0).toLocaleString('en-IN')}
               </div>
             </div>
 
@@ -294,29 +402,33 @@ export default function BudgetsPage() {
               </span>
               <div className="font-numeric font-bold text-lg md:text-xl text-mint-cash flex items-center">
                 <IndianRupee size={16} className="stroke-[2.5] mr-0.5 opacity-80" />
-                {Math.max(0, budgets.reduce((sum, b) => sum + (b.limit || 0) - b.spent, 0)).toLocaleString('en-IN')}
+                {Math.max(0, budgets.reduce((sum, b) => sum + (b.limit > 0 ? (b.limit - b.spent) : 0), 0)).toLocaleString('en-IN')}
               </div>
             </div>
 
             <div className="space-y-1">
               <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase block">
-                Budget Health
+                Uncapped Spending
               </span>
-              <div className="text-sm font-semibold text-ivory-white mt-1">
-                {(() => {
-                  const totalLimit = budgets.reduce((sum, b) => sum + (b.limit || 0), 0);
-                  const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
-                  if (totalLimit === 0) return <span className="text-slate-gray">No Budget Set</span>;
-                  const percent = Math.round((totalSpent / totalLimit) * 100);
-                  if (percent > 100) return <span className="text-crimson-alert">🔴 Over Budget</span>;
-                  if (percent >= 80) return <span className="text-rupee-gold">🟡 Near Limit</span>;
-                  return <span className="text-mint-cash">🟢 On Track</span>;
-                })()}
+              <div className="font-numeric font-bold text-lg md:text-xl text-ivory-white flex items-center">
+                <IndianRupee size={16} className="stroke-[2.5] mr-0.5 text-slate-gray" />
+                {budgets.reduce((sum, b) => sum + (b.limit > 0 ? 0 : b.spent), 0).toLocaleString('en-IN')}
+              </div>
+            
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase block">
+                Monthly Income
+              </span>
+              <div className="font-numeric font-bold text-lg md:text-xl text-ivory-white flex items-center">
+                <IndianRupee size={16} className="stroke-[2.5] mr-0.5 text-slate-gray" />
+                {monthlyIncome.toLocaleString('en-IN')}
               </div>
             </div>
           </div>
         </section>
-      )}
+      ) : null}
 
       {/* Main Budget Grid */}
       {isLoading ? (
@@ -426,6 +538,117 @@ export default function BudgetsPage() {
         </section>
       )}
 
+      {/* Financial Preferences Modal */}
+      {showFinancialPrefs && (
+        <div className="fixed inset-0 bg-bg-deep/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-card-fill border border-slate-gray/15 rounded-xl p-6 shadow-2xl space-y-4 animate-fade-in animate-duration-150">
+            <div className="flex items-center justify-between border-b border-slate-gray/10 pb-2">
+              <span className="text-xs font-bold text-mint-cash tracking-wider uppercase flex items-center gap-1.5 font-numeric">
+                <Wallet size={12} />
+                Financial Preferences
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowFinancialPrefs(false)}
+                className="text-slate-gray hover:text-ivory-white transition-colors cursor-pointer w-8 h-8 flex items-center justify-center rounded-lg hover:bg-bg-deep"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="font-display font-medium text-sm text-ivory-white">
+                Set Monthly Income & Payday
+              </h3>
+              <p className="text-[11px] text-slate-gray">
+                Setting income for <span className="text-mint-cash font-semibold">{currentMonthLabel}</span>
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmitFinancial(onSubmitFinancial)} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-gray tracking-wide uppercase">
+                  Monthly Income (INR)
+                </label>
+                <div className="relative h-11">
+                  <IndianRupee
+                    size={14}
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-gray/50"
+                  />
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="e.g. 50000"
+                    {...registerFinancial('monthlyIncome', { valueAsNumber: true })}
+                    className={`w-full h-full bg-bg-deep border rounded-lg pl-9 pr-4 py-2.5 text-sm text-ivory-white placeholder:text-slate-gray/30 focus-ring font-numeric ${
+                      financialErrors.monthlyIncome ? 'border-crimson-alert/40' : 'border-slate-gray/10'
+                    }`}
+                  />
+                </div>
+                {financialErrors.monthlyIncome && (
+                  <p className="text-[11px] text-crimson-alert">{financialErrors.monthlyIncome.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-gray tracking-wide uppercase">
+                  Payday (Day of Month)
+                </label>
+                <div className="relative h-11">
+                  <Calendar
+                    size={14}
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-gray/50"
+                  />
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    placeholder="e.g. 1"
+                    {...registerFinancial('payday', { valueAsNumber: true })}
+                    className={`w-full h-full bg-bg-deep border rounded-lg pl-9 pr-4 py-2.5 text-sm text-ivory-white placeholder:text-slate-gray/30 focus-ring font-numeric ${
+                      financialErrors.payday ? 'border-crimson-alert/40' : 'border-slate-gray/10'
+                    }`}
+                  />
+                </div>
+                {financialErrors.payday && (
+                  <p className="text-[11px] text-crimson-alert">{financialErrors.payday.message}</p>
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowFinancialPrefs(false)}
+                  className="flex-1 h-11 border border-slate-gray/10 hover:border-slate-gray/25 text-slate-gray hover:text-ivory-white text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                  disabled={incomeMutation.isPending}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 h-11 bg-mint-cash hover:bg-emerald-400 text-bg-deep text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                  disabled={incomeMutation.isPending || isIncomeLoading}
+                >
+                  {incomeMutation.isPending ? (
+                    <>
+                      <Loader2 size={12} className="animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    'Save'
+                  )}
+                </button>
+              </div>
+              {incomeMutation.isError && (
+                <p className="text-[11px] text-crimson-alert">
+                  {incomeMutation.error.message || 'Failed to save income.'}
+                </p>
+              )}
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Editor Modal Overlay */}
       {editingCategory && (
         <div className="fixed inset-0 bg-bg-deep/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -453,7 +676,7 @@ export default function BudgetsPage() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleSubmitBudget(onSubmitBudget)} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-gray tracking-wide uppercase">
                   Monthly Limit (INR)
@@ -467,15 +690,15 @@ export default function BudgetsPage() {
                     type="number"
                     step="any"
                     placeholder="e.g. 5000"
-                    {...register('monthlyLimit', { valueAsNumber: true })}
+                    {...registerBudget('monthlyLimit', { valueAsNumber: true })}
                     className={`w-full h-full bg-bg-deep border rounded-lg pl-9 pr-4 py-2.5 text-sm text-ivory-white placeholder:text-slate-gray/30 focus-ring font-numeric ${
-                      errors.monthlyLimit ? 'border-crimson-alert/40' : 'border-slate-gray/10'
+                      budgetErrors.monthlyLimit ? 'border-crimson-alert/40' : 'border-slate-gray/10'
                     }`}
                     disabled={mutation.isPending}
                   />
                 </div>
-                {errors.monthlyLimit && (
-                  <p className="text-[11px] text-crimson-alert">{errors.monthlyLimit.message}</p>
+                {budgetErrors.monthlyLimit && (
+                  <p className="text-[11px] text-crimson-alert">{budgetErrors.monthlyLimit.message}</p>
                 )}
               </div>
 
@@ -496,6 +719,7 @@ export default function BudgetsPage() {
                 </button>
                 <button
                   type="submit"
+                  onClick={handleSubmitBudget(onSubmitBudget)}
                   className="flex-1 h-11 bg-mint-cash hover:bg-emerald-400 text-bg-deep text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
                   disabled={mutation.isPending}
                 >

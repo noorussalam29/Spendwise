@@ -483,40 +483,39 @@ export default function ExpensesPage() {
 
       {/* Top Dock (Search & Category filters) */}
       <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-4 md:p-5 grid grid-cols-1 md:grid-cols-2 gap-4 shadow-sm items-center">
-        {/* Search */}
-        <div className="relative">
-          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-gray/45" />
-          <input
-            type="text"
-            placeholder="Search by title..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-bg-deep border border-slate-gray/10 rounded-lg pl-9 pr-4 py-2.5 text-xs text-ivory-white placeholder:text-slate-gray/40 focus-ring"
-          />
-        </div>
+  {/* Search */}
+  <div className="relative">
+    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-gray/45" />
+    <input
+      type="text"
+      placeholder="Search by title..."
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+      className="w-full bg-bg-deep border border-slate-gray/10 rounded-lg pl-9 pr-4 py-2.5 text-xs text-ivory-white placeholder:text-slate-gray/40 focus:outline-none focus:ring-0"
+    />
+  </div>
 
-        {/* Category Filter */}
-        <div className="relative">
-          <Filter size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-gray/45" />
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="w-full bg-bg-deep border border-slate-gray/10 rounded-lg pl-9 pr-4 py-2.5 text-xs text-ivory-white focus-ring cursor-pointer appearance-none"
-          >
-            <option value="All">All Categories</option>
-            <option value="Food">Food</option>
-            <option value="Transport">Transport</option>
-            <option value="Rent">Rent</option>
-            <option value="Shopping">Shopping</option>
-            <option value="Data/Recharge">Data/Recharge</option>
-            <option value="EMI">EMI</option>
-            <option value="Family Support">Family Support</option>
-            <option value="Savings">Savings</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-      </section>
-
+  {/* Category Filter */}
+  <div className="relative">
+    <Filter size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-gray/45" />
+    <select
+      value={category}
+      onChange={(e) => setCategory(e.target.value)}
+      className="w-full bg-bg-deep border border-slate-gray/10 rounded-lg pl-9 pr-4 py-2.5 text-xs text-ivory-white focus:outline-none focus:ring-0 cursor-pointer appearance-none"
+    >
+      <option value="All">All Categories</option>
+      <option value="Food">Food</option>
+      <option value="Transport">Transport</option>
+      <option value="Rent">Rent</option>
+      <option value="Shopping">Shopping</option>
+      <option value="Data/Recharge">Data/Recharge</option>
+      <option value="EMI">EMI</option>
+      <option value="Family Support">Family Support</option>
+      <option value="Savings">Savings</option>
+      <option value="Other">Other</option>
+    </select>
+  </div>
+</section>
       
 
       {/* Summary Stats */}

@@ -43,6 +43,16 @@ export interface IBudget {
   month: string; // Format: "YYYY-MM"
 }
 
+export interface IMonthlyIncome {
+  _id: string;
+  userId: string;
+  month: string; // Format: "YYYY-MM"
+  monthlyIncome: number;
+  payday: number;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
+
 export interface IGoal {
   _id: string;
   userId: string;

@@ -38,7 +38,6 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           email: user.email,
           payday: user.payday,
-          monthlyIncome: user.monthlyIncome,
           currentStreak: user.currentStreak,
         };
       },
@@ -49,7 +48,6 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.payday = (user as any).payday;
-        token.monthlyIncome = (user as any).monthlyIncome;
         token.currentStreak = (user as any).currentStreak;
       }
 
@@ -57,8 +55,22 @@ export const authOptions: NextAuthOptions = {
       if (trigger === 'update' && session) {
         if (session.currentStreak !== undefined) token.currentStreak = session.currentStreak;
         if (session.payday !== undefined) token.payday = session.payday;
-        if (session.monthlyIncome !== undefined) token.monthlyIncome = session.monthlyIncome;
         if (session.name !== undefined) token.name = session.name;
+      }
+
+      // Re-fetch user data from database on token refresh to get latest values
+      if (token.id && !user) {
+        try {
+          await dbConnect();
+          const dbUser = await User.findById(token.id);
+          if (dbUser) {
+            token.payday = dbUser.payday;
+            token.currentStreak = dbUser.currentStreak;
+            token.name = dbUser.name;
+          }
+        } catch (error) {
+          console.error('Error fetching user data in JWT callback:', error);
+        }
       }
 
       return token;
@@ -67,7 +79,6 @@ export const authOptions: NextAuthOptions = {
       if (token && session.user) {
         (session.user as any).id = token.id;
         (session.user as any).payday = token.payday;
-        (session.user as any).monthlyIncome = token.monthlyIncome;
         (session.user as any).currentStreak = token.currentStreak;
       }
       return session;
