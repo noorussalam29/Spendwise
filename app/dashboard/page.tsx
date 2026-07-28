@@ -1,21 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
   Flame,
   IndianRupee,
-  Wallet,
   AlertTriangle,
-  TrendingUp,
   ArrowRight,
   PieChart as PieIcon,
   Activity,
-  Save,
-  Check,
-  Edit2,
   Calendar,
   Sparkles,
+  Zap,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -23,12 +19,7 @@ import {
   Pie,
   Cell,
   ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
   Tooltip,
-  CartesianGrid,
   Legend,
 } from 'recharts';
 
@@ -41,14 +32,12 @@ const CATEGORY_COLORS: Record<string, string> = {
   EMI: '#F5A623',
   'Family Support': '#F472B6',
   Savings: '#05D393',
+  Investment: '#05D393',
   Other: '#64748B',
 };
 
 export default function DashboardPage() {
-  const queryClient = useQueryClient();
   const [isMounted, setIsMounted] = useState(false);
-  const [monthlyBudget, setMonthlyBudget] = useState(0);
-  const [isEditingBudget, setIsEditingBudget] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -63,38 +52,16 @@ export default function DashboardPage() {
     },
   });
 
-  const updateBudgetMutation = useMutation({
-    mutationFn: async (budget: number) => {
-      const response = await fetch('/api/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ monthlyBudget: budget }),
-      });
-      if (!response.ok) throw new Error('Failed to update budget');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      setIsEditingBudget(false);
-    },
-  });
-
-  useEffect(() => {
-    if (stats?.budget?.totalLimit > 0) {
-      setMonthlyBudget(stats.budget.totalLimit);
-    }
-  }, [stats]);
-
   if (isLoading) {
     return (
-      <div className="space-y-6 md:space-y-8 pb-12 animate-pulse">
+      <div className="space-y-6 pb-12 animate-pulse">
         <div className="flex justify-between items-center">
           <div className="h-9 w-56 bg-card-fill rounded-lg" />
           <div className="h-9 w-28 bg-card-fill rounded-lg" />
         </div>
         <div className="h-48 w-full bg-card-fill rounded-xl" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
             <div key={i} className="h-28 bg-card-fill rounded-xl" />
           ))}
         </div>
@@ -104,7 +71,7 @@ export default function DashboardPage() {
 
   if (isError || !stats) {
     return (
-      <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-12 text-center max-w-lg mx-auto space-y-4 shadow-sm">
+      <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-8 text-center max-w-lg mx-auto space-y-4 shadow-sm">
         <AlertTriangle size={32} className="text-crimson-alert mx-auto animate-bounce" />
         <div>
           <h3 className="text-sm font-semibold text-ivory-white">Failed to load dashboard metrics</h3>
@@ -127,14 +94,20 @@ export default function DashboardPage() {
     pacing = { safeToSpendDaily: 0 }, 
     budget = { usedPercent: 0, totalLimit: 0 }, 
     stats: summary = { todaySpent: 0, largestCategory: { category: 'Other', amount: 0 } }, 
-    charts = { categoriesBreakdown: [], trend: [] }, 
+    charts = { categoriesBreakdown: [] }, 
     recentLedger = [], 
-    financials = { moneyLeft: 0, sentToFamily: 0, savedThisMonth: 0 }, 
+    financials = { moneyLeft: 0, savedThisMonth: 0 }, 
     monthlyIncome = 0 
   } = stats;
 
+  // Calculate circular progress for Money Left This Cycle
+  const maxCap = monthlyIncome > 0 ? monthlyIncome : (budget.totalLimit > 0 ? budget.totalLimit : 1);
+  const moneyLeftPercentage = Math.max(0, Math.min(100, (financials.moneyLeft / maxCap) * 100));
+  const circleCircumference = 2 * Math.PI * 36;
+  const strokeDashoffset = circleCircumference - (moneyLeftPercentage / 100) * circleCircumference;
+
   return (
-    <div className="space-y-6 md:space-y-8 animate-fade-in pb-16 text-ivory-white">
+    <div className="space-y-6 animate-fade-in pb-16 text-ivory-white">
       
       {/* Header Container */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-gray/10 pb-4">
@@ -142,18 +115,18 @@ export default function DashboardPage() {
           <h1 className="font-display font-semibold text-2xl md:text-3xl text-ivory-white tracking-tight">
             Financial Command Center
           </h1>
-          <p className="text-sm text-slate-gray mt-1">
+          <p className="text-xs md:text-sm text-slate-gray mt-1">
             Your money at a glance. Stay in control between paydays.
           </p>
         </div>
       </div>
 
-      {/* HERO SECTION CONTAINER - Rearranged to match wireframe sketch */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* HERO SECTION CONTAINER */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Left Card: Today's Outflow + Pacing Dynamics */}
-        <div className="lg:col-span-2 bg-card-fill border border-slate-gray/10 rounded-xl p-6 md:p-8 shadow-sm flex flex-col justify-between space-y-6">
-          <div className="space-y-2">
+        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-6 shadow-sm flex flex-col justify-between space-y-6">
+          <div className="space-y-1.5">
             <h2 className="font-display font-medium text-xs text-slate-gray uppercase tracking-wider">
               Today's Outflow
             </h2>
@@ -163,47 +136,83 @@ export default function DashboardPage() {
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-gray/5">
+          <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-gray/5">
             <div className="space-y-1">
-              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase">
-                Safe To Spend Today
+              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase block">
+                Safe To Spend
               </span>
-              <div className="font-numeric font-bold text-xl text-mint-cash flex items-center">
-                <IndianRupee size={16} className="stroke-[2.5] mr-0.5" />
+              <div className="font-numeric font-bold text-base md:text-lg text-mint-cash flex items-center">
+                <IndianRupee size={14} className="stroke-[2.5] mr-0.5" />
                 {pacing.safeToSpendDaily.toLocaleString('en-IN')}
               </div>
             </div>
+
             <div className="space-y-1">
-              <span className="text-[10px] text-slate-gray block uppercase font-medium">
+              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase block">
                 Days to Payday
               </span>
-              <span className="text-xl font-bold text-rupee-gold font-numeric">
+              <div className="font-numeric font-bold text-base md:text-lg text-rupee-gold">
                 {cycle.daysRemaining} days
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase block">
+                Cycle Spend
               </span>
+              <div className="font-numeric font-bold text-base md:text-lg text-crimson-alert flex items-center">
+                <IndianRupee size={14} className="stroke-[2.5] mr-0.5" />
+                {cycle.totalSpent.toLocaleString('en-IN')}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Right Card: Money Left + Income & Spending Overview */}
-        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-6 flex flex-col justify-between space-y-6 shadow-sm">
-          <div className="space-y-2">
-            <h2 className="font-display font-medium text-xs text-slate-gray uppercase tracking-wider">
-              Money Left This Cycle
-            </h2>
-            <div className="font-numeric font-bold text-3xl md:text-4xl text-ivory-white flex items-center tracking-tight">
-              <IndianRupee size={28} className="stroke-[2.5] text-mint-cash mr-1" />
-              {financials.moneyLeft.toLocaleString('en-IN')}
+        {/* Right Card: Money Left This Cycle with Circular Progress */}
+        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-6 shadow-sm flex flex-col justify-between space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1.5">
+              <h2 className="font-display font-medium text-xs text-slate-gray uppercase tracking-wider">
+                Money Left This Cycle
+              </h2>
+              <div className="font-numeric font-bold text-3xl md:text-4xl text-ivory-white flex items-center tracking-tight">
+                <IndianRupee size={28} className="stroke-[2.5] text-mint-cash mr-1" />
+                {financials.moneyLeft.toLocaleString('en-IN')}
+              </div>
+            </div>
+
+            {/* Circular Progress Ring */}
+            <div className="relative w-18 h-18 shrink-0 flex items-center justify-center">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="36"
+                  className="stroke-slate-gray/10"
+                  strokeWidth="7"
+                  fill="transparent"
+                />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="36"
+                  className="stroke-mint-cash transition-all duration-700 ease-out"
+                  strokeWidth="7"
+                  strokeDasharray={circleCircumference}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                  fill="transparent"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center font-numeric font-bold text-xs text-ivory-white">
+                {Math.round(moneyLeftPercentage)}%
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-gray/5 text-xs text-slate-gray">
-            <div>
-              <span className="block text-[10px] text-slate-gray uppercase font-medium">Monthly Income</span>
-              <span className="font-semibold text-ivory-white text-sm">₹{monthlyIncome.toLocaleString('en-IN')}</span>
-            </div>
-            <div>
-              <span className="block text-[10px] text-slate-gray uppercase font-medium">Cycle Spending</span>
-              <span className="font-semibold text-crimson-alert text-sm">₹{cycle.totalSpent.toLocaleString('en-IN')}</span>
+          <div className="pt-4 border-t border-slate-gray/5">
+            <div className="flex items-center justify-between text-xs text-slate-gray">
+              <span>Monthly Income: <strong className="text-ivory-white font-numeric">₹{monthlyIncome.toLocaleString('en-IN')}</strong></span>
             </div>
           </div>
         </div>
@@ -219,7 +228,7 @@ export default function DashboardPage() {
           <span className="text-[10px] bg-card-fill border border-slate-gray/5 px-2 py-0.5 rounded text-slate-gray font-medium">Active Budget</span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {charts.categoriesBreakdown.slice(0, 6).map((cat: any) => (
             <div key={cat.name} className="bg-card-fill border border-slate-gray/5 rounded-lg p-3 transition-all hover:border-slate-gray/10">
               <div className="flex items-center gap-1.5 mb-1 truncate">
@@ -235,83 +244,80 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* MAIN VALUE GRID */}
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+      {/* MAIN VALUE GRID (Budget & Largest Outflow Node) */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
         
         {/* Budget Metric Card */}
         <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 flex flex-col justify-between min-h-[110px] shadow-sm">
           <div className="flex items-center justify-between text-slate-gray">
             <span className="text-xs font-medium">Budget Used ({budget.usedPercent}%)</span>
-            <button 
-              onClick={() => setIsEditingBudget(!isEditingBudget)} 
-              className="p-1 hover:bg-card-fill border border-transparent hover:border-slate-gray/5 text-slate-gray hover:text-ivory-white rounded transition-colors cursor-pointer"
-            >
-              {isEditingBudget ? <Check size={14} className="text-mint-cash" /> : <Edit2 size={12} />}
-            </button>
           </div>
           
           <div className="my-1">
-            {isEditingBudget ? (
-              <div className="flex items-center gap-1.5 mt-1">
-                <input
-                  type="number"
-                  value={monthlyBudget}
-                  onChange={(e) => setMonthlyBudget(Number(e.target.value))}
-                  className="w-full bg-card-fill text-ivory-white text-sm font-bold p-1 rounded border border-slate-gray/10 focus:outline-none focus:border-mint-cash"
-                />
-                <button
-                  onClick={() => updateBudgetMutation.mutate(monthlyBudget)}
-                  className="p-1.5 bg-mint-cash text-white rounded hover:opacity-90 transition-colors cursor-pointer"
-                >
-                  <Save size={14} />
-                </button>
-              </div>
-            ) : (
-              <div className="font-numeric font-bold text-xl md:text-2xl text-ivory-white">
-                ₹{budget.totalLimit.toLocaleString('en-IN')}
-              </div>
-            )}
+            <div className="font-numeric font-bold text-xl md:text-2xl text-ivory-white">
+              ₹{budget.totalLimit.toLocaleString('en-IN')}
+            </div>
           </div>
 
           <div className="w-full bg-slate-gray/10 h-1.5 rounded-full overflow-hidden mt-2">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                budget.usedPercent > 100 ? 'bg-crimson-alert' : budget.usedPercent >= 80 ? 'bg-rupee-gold' : 'bg-mint-cash'
-              }`}
-              style={{ width: `${Math.min(100, budget.usedPercent)}%` }}
+              className="h-full rounded-full transition-all duration-500"
+              style={{ 
+                width: `${Math.min(100, budget.usedPercent)}%`,
+                backgroundColor: budget.usedPercent > 100 ? '#EF4444' : budget.usedPercent >= 80 ? '#F59E0B' : '#047857'
+              }}
             />
           </div>
         </div>
 
-        {/* Sent To Family */}
+        {/* NEW: Largest Outflow Node Card */}
         <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between text-slate-gray">
-            <span className="text-xs font-medium">Sent To Family</span>
-            <TrendingUp size={16} className="text-slate-gray" />
+            <span className="text-xs font-medium">Largest Outflow Node</span>
+            <Zap size={16} className="text-rupee-gold" />
           </div>
-          <div className="font-numeric font-bold text-xl md:text-2xl text-ivory-white">
-            <IndianRupee size={18} className="stroke-[2.5] inline mr-0.5 text-slate-gray" />
-            {financials.sentToFamily.toLocaleString('en-IN')}
+          
+          <div className="space-y-3 my-1">
+            <div className="flex items-center gap-2">
+              <div 
+                className="w-3 h-3 rounded-full shrink-0" 
+                style={{ backgroundColor: CATEGORY_COLORS[summary.largestCategory.category] || '#64748B' }} 
+              />
+              <span className="font-display font-semibold text-lg text-ivory-white">
+                {summary.largestCategory.category}
+              </span>
+            </div>
+            
+            <div className="flex items-baseline justify-between">
+              <div className="font-numeric font-bold text-2xl md:text-3xl text-ivory-white flex items-center">
+                <IndianRupee size={20} className="stroke-[2.5] inline mr-1" />
+                {summary.largestCategory.amount.toLocaleString('en-IN')}
+              </div>
+              {charts.categoriesBreakdown.length > 0 && (
+                <span className="text-xs font-semibold text-slate-gray">
+                  {Math.round((summary.largestCategory.amount / charts.categoriesBreakdown.reduce((sum: number, c: any) => sum + c.value, 0)) * 100)}% of total
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-
-        {/* Saved This Month */}
-        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 flex flex-col justify-between shadow-sm">
-          <div className="flex items-center justify-between text-slate-gray">
-            <span className="text-xs font-medium">Saved This Month</span>
-            <Flame size={16} className="text-mint-cash" />
+          
+          <div className="w-full bg-slate-gray/10 h-1.5 rounded-full overflow-hidden mt-2">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{ 
+                width: charts.categoriesBreakdown.length > 0 
+                  ? `${Math.min(100, (summary.largestCategory.amount / charts.categoriesBreakdown.reduce((sum: number, c: any) => sum + c.value, 0)) * 100)}%` 
+                  : '0%',
+                backgroundColor: CATEGORY_COLORS[summary.largestCategory.category] || '#64748B'
+              }}
+            />
           </div>
-          <div className="font-numeric font-bold text-xl md:text-2xl text-mint-cash">
-            <IndianRupee size={18} className="stroke-[2.5] inline mr-0.5" />
-            {financials.savedThisMonth.toLocaleString('en-IN')}
-          </div>
+          <span className="text-[10px] text-slate-gray mt-2 block">Top spending category this calendar month</span>
         </div>
       </section>
 
-      {/* CHARTS CONTAINER */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-        
-        {/* Category Breakdown */}
+      {/* CHARTS CONTAINER (Single Category Breakdown Card) */}
+      <section className="grid grid-cols-1 gap-6">
         <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 md:p-6 flex flex-col justify-between space-y-4 shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-gray/5 pb-2">
             <h3 className="font-display font-semibold text-sm md:text-base text-ivory-white flex items-center gap-2">
@@ -381,63 +387,6 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-
-        {/* Historic Ledger Area Chart */}
-        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 md:p-6 space-y-4 shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-gray/5 pb-2">
-            <h3 className="font-display font-semibold text-sm md:text-base text-ivory-white flex items-center gap-2">
-              <TrendingUp size={16} className="text-mint-cash" />
-              6-Month Ledger Trend
-            </h3>
-            <span className="text-[10px] text-slate-gray font-medium">Outflow vs Limit</span>
-          </div>
-
-          <div className="h-64">
-            {isMounted ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={charts.trend} margin={{ top: 10, right: 5, left: -22, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorSpent" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#05D393" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#05D393" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.05)" />
-                  <XAxis dataKey="month" stroke="#94A3B8" fontSize={10} tickLine={false} axisLine={false} />
-                  <YAxis
-                    stroke="#94A3B8"
-                    fontSize={10}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(v) => `₹${v >= 1000 ? v / 1000 + 'k' : v}`}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '8px',
-                    }}
-                    itemStyle={{ color: '#1E293B' }}
-                    labelStyle={{ color: '#64748B', fontWeight: 'bold' }}
-                    formatter={(value) => [`₹${Number(value).toLocaleString('en-IN')}`]}
-                  />
-                  <Legend
-                    verticalAlign="bottom"
-                    height={36}
-                    iconSize={6}
-                    formatter={(value) => (
-                      <span className="text-[10px] text-slate-gray font-medium px-1">
-                        {value === 'spent' ? 'Spent' : 'Limit Target'}
-                      </span>
-                    )}
-                  />
-                  <Area type="monotone" dataKey="spent" stroke="#05D393" strokeWidth={2.5} fillOpacity={1} fill="url(#colorSpent)" />
-                  <Area type="monotone" dataKey="budget" stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4 4" fill="none" />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : null}
-          </div>
-        </div>
       </section>
 
       {/* RECENT LEDGER ENTRIES */}
@@ -504,6 +453,7 @@ export default function DashboardPage() {
           )}
         </div>
       </section>
+
     </div>
   );
 }
