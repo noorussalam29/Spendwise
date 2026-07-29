@@ -100,6 +100,8 @@ export default function DashboardPage() {
     monthlyIncome = 0 
   } = stats;
 
+  const categoriesBreakdown = charts.categoriesBreakdown || [];
+
   // Calculate circular progress for Money Left This Cycle
   const maxCap = monthlyIncome > 0 ? monthlyIncome : (budget.totalLimit > 0 ? budget.totalLimit : 1);
   const moneyLeftPercentage = Math.max(0, Math.min(100, (financials.moneyLeft / maxCap) * 100));
@@ -226,7 +228,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {charts.categoriesBreakdown.slice(0, 6).map((cat: any) => (
+          {categoriesBreakdown.slice(0, 6).map((cat: any) => (
             <div key={cat.name} className="bg-card-fill border border-slate-gray/5 rounded-lg p-3 transition-all hover:border-slate-gray/10">
               <div className="flex items-center gap-1.5 mb-1 truncate">
                 <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: CATEGORY_COLORS[cat.name] || '#64748B' }} />
@@ -267,7 +269,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* NEW: Largest Outflow Node Card */}
+        {/* Largest Outflow Node Card */}
         <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between text-slate-gray">
             <span className="text-xs font-medium">Largest Outflow Node</span>
@@ -290,9 +292,9 @@ export default function DashboardPage() {
                 <IndianRupee size={20} className="stroke-[2.5] inline mr-1" />
                 {summary.largestCategory.amount.toLocaleString('en-IN')}
               </div>
-              {charts.categoriesBreakdown.length > 0 && (
+              {categoriesBreakdown.length > 0 && (
                 <span className="text-xs font-semibold text-slate-gray">
-                  {Math.round((summary.largestCategory.amount / charts.categoriesBreakdown.reduce((sum: number, c: any) => sum + c.value, 0)) * 100)}% of total
+                  {Math.round((summary.largestCategory.amount / categoriesBreakdown.reduce((sum: number, c: any) => sum + c.value, 0)) * 100)}% of total
                 </span>
               )}
             </div>
@@ -302,8 +304,8 @@ export default function DashboardPage() {
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{ 
-                width: charts.categoriesBreakdown.length > 0 
-                  ? `${Math.min(100, (summary.largestCategory.amount / charts.categoriesBreakdown.reduce((sum: number, c: any) => sum + c.value, 0)) * 100)}%` 
+                width: categoriesBreakdown.length > 0 
+                  ? `${Math.min(100, (summary.largestCategory.amount / categoriesBreakdown.reduce((sum: number, c: any) => sum + c.value, 0)) * 100)}%` 
                   : '0%',
                 backgroundColor: CATEGORY_COLORS[summary.largestCategory.category] || '#64748B'
               }}
@@ -325,11 +327,11 @@ export default function DashboardPage() {
           </div>
 
           <div className="h-60 flex items-center justify-center outline-none focus:outline-none focus:ring-0 focus-visible:outline-none">
-            {isMounted && charts.categoriesBreakdown.length > 0 ? (
+            {isMounted && categoriesBreakdown.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart className="outline-none focus:outline-none">
+                <PieChart accessibilityLayer={false} className="outline-none focus:outline-none" style={{ outline: 'none' }}>
                   <Pie
-                    data={charts.categoriesBreakdown}
+                    data={categoriesBreakdown}
                     cx="50%"
                     cy="50%"
                     innerRadius={65}
@@ -339,8 +341,13 @@ export default function DashboardPage() {
                     className="outline-none focus:outline-none"
                     style={{ outline: 'none' }}
                   >
-                    {charts.categoriesBreakdown.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.name] || '#64748B'} className="outline-none focus:outline-none" style={{ outline: 'none' }} />
+                    {categoriesBreakdown.map((entry: any, index: number) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={CATEGORY_COLORS[entry.name] || '#64748B'} 
+                        className="outline-none focus:outline-none" 
+                        style={{ outline: 'none' }} 
+                      />
                     ))}
                   </Pie>
                   <Tooltip

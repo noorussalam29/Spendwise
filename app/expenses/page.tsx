@@ -267,6 +267,37 @@ export default function ExpensesPage() {
   const currentMonthLabel = formatMonthLabel(month);
   const isCurrentMonth = month === `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 
+  // Calculate summary stats dynamically from filtered expenses
+  const summaryStats = useMemo(() => {
+    if (filteredExpenses.length === 0) {
+      return {
+        totalSpent: 0,
+        transactions: 0,
+        average: 0,
+        topCategory: 'N/A'
+      };
+    }
+
+    const totalSpent = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const transactions = filteredExpenses.length;
+    const average = totalSpent / transactions;
+
+    // Calculate top category
+    const categoryTotals = filteredExpenses.reduce((acc, expense) => {
+      acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const topCategory = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+
+    return {
+      totalSpent,
+      transactions,
+      average,
+      topCategory
+    };
+  }, [filteredExpenses]);
+
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in pb-28 relative">
       
@@ -512,7 +543,7 @@ export default function ExpensesPage() {
               </span>
               <div className="font-numeric font-bold text-lg md:text-xl text-ivory-white flex items-center justify-center">
                 <IndianRupee size={16} className="stroke-[2.5] mr-1 text-mint-cash" />
-                1,38,231
+                {summaryStats.totalSpent.toLocaleString('en-IN')}
               </div>
             </div>
 
@@ -521,7 +552,7 @@ export default function ExpensesPage() {
                 Transactions
               </span>
               <div className="font-numeric font-bold text-lg md:text-xl text-ivory-white">
-                19
+                {summaryStats.transactions}
               </div>
             </div>
 
@@ -531,7 +562,7 @@ export default function ExpensesPage() {
               </span>
               <div className="font-numeric font-bold text-lg md:text-xl text-ivory-white flex items-center justify-center">
                 <IndianRupee size={16} className="stroke-[2.5] mr-1 text-mint-cash" />
-                7,275
+                {Math.round(summaryStats.average).toLocaleString('en-IN')}
               </div>
             </div>
 
@@ -540,7 +571,7 @@ export default function ExpensesPage() {
                 Top Category
               </span>
               <div className="text-sm md:text-base font-semibold text-ivory-white truncate flex items-center justify-center gap-1.5 pt-0.5">
-                <span className="truncate">Food</span>
+                <span className="truncate">{summaryStats.topCategory}</span>
               </div>
             </div>
           </div>
