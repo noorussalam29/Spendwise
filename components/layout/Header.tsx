@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { Flame, LogOut } from 'lucide-react';
+import { Flame, LogOut, X } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 
 interface HeaderProps {
@@ -10,37 +11,74 @@ interface HeaderProps {
 
 export default function Header({ streak = 0 }: HeaderProps) {
   const { data: session } = useSession();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   return (
-    <header className="md:hidden fixed top-0 left-0 w-full h-16 bg-card-fill border-b border-slate-gray/10 z-30 flex items-center justify-between px-6">
-      <Link href="/dashboard" className="flex items-center">
-        <span className="font-display font-bold text-lg tracking-wider bg-gradient-to-r from-mint-cash to-emerald-400 bg-clip-text text-transparent">
-          SPENDWISE
-        </span>
-      </Link>
+    <>
+      <header className="md:hidden fixed top-0 left-0 w-full h-16 bg-card-fill border-b border-slate-gray/10 z-30 flex items-center justify-between px-6">
+        <Link href="/dashboard" className="flex items-center">
+          <span className="font-display font-bold text-lg tracking-wider bg-gradient-to-r from-mint-cash to-emerald-400 bg-clip-text text-transparent">
+            SPENDWISE
+          </span>
+        </Link>
 
-      <div className="flex items-center gap-4">
-        {/* Streak indicator on mobile header */}
-        {session?.user && (
-          <div className="flex items-center gap-1 bg-bg-deep border border-slate-gray/10 px-2 py-1 rounded-md">
-            <Flame size={14} className="text-rupee-gold fill-rupee-gold/20" />
-            <span className="font-numeric font-semibold text-xs text-rupee-gold">
-              {streak}
-            </span>
+        <div className="flex items-center gap-4">
+          {/* Streak indicator on mobile header */}
+          {session?.user && (
+            <div className="flex items-center gap-1 bg-bg-deep border border-slate-gray/10 px-2 py-1 rounded-md">
+              <Flame size={14} className="text-rupee-gold fill-rupee-gold/20" />
+              <span className="font-numeric font-semibold text-xs text-rupee-gold">
+                {streak}
+              </span>
+            </div>
+          )}
+
+          {/* User logout trigger */}
+          {session?.user && (
+            <button
+              onClick={() => setShowLogoutModal(true)}
+              className="p-1 rounded-md text-slate-gray hover:text-crimson-alert transition-colors"
+              title="Log Out"
+            >
+              <LogOut size={16} />
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 bg-bg-deep/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-card-fill border border-slate-gray/15 rounded-xl p-6 shadow-2xl space-y-4 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-ivory-white">Sign Out</h3>
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="text-slate-gray hover:text-ivory-white transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <p className="text-xs text-slate-gray leading-relaxed">
+              Are you sure you want to sign out? You will need to sign in again to access your account.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 h-11 border border-slate-gray/10 hover:border-slate-gray/25 text-slate-gray hover:text-ivory-white text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => signOut({ callbackUrl: '/login' })}
+                className="flex-1 h-11 bg-crimson-alert/10 hover:bg-crimson-alert/20 text-crimson-alert border border-crimson-alert/20 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
-        )}
-
-        {/* User logout trigger */}
-        {session?.user && (
-          <button
-            onClick={() => signOut({ callbackUrl: '/login' })}
-            className="p-1 rounded-md text-slate-gray hover:text-crimson-alert transition-colors"
-            title="Log Out"
-          >
-            <LogOut size={16} />
-          </button>
-        )}
-      </div>
-    </header>
+        </div>
+      )}
+    </>
   );
 }

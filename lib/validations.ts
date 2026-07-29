@@ -84,3 +84,19 @@ export const settingsSchema = z.object({
   path: ['currentPassword'],
 });
 
+// OTP SCHEMAS
+export const sendOTPSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+});
+
+export const verifyOTPSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+  otp: z.string().length(6, 'OTP must be 6 digits'),
+});
+
+export const resetPasswordSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+  otp: z.string().length(6, 'OTP must be 6 digits'),
+  newPassword: z.string().min(6, 'Password must be at least 6 characters'),
+});
+

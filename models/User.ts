@@ -42,6 +42,14 @@ const UserSchema = new Schema(
       type: Date,
       default: null,
     },
+    resetOTP: {
+      type: String,
+      default: null,
+    },
+    resetOTPExpiry: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true, // Automatically manages createdAt and updatedAt
