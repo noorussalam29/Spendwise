@@ -228,9 +228,6 @@ export default function BudgetsPage() {
           <h1 className="font-display font-semibold text-2xl md:text-3xl text-ivory-white tracking-tight truncate">
             Monthly Budgets
           </h1>
-          <p className="hidden sm:block text-sm text-slate-gray mt-1">
-            Set monthly spending limits and track your consumption.
-          </p>
         </div>
         <button
           type="button"
@@ -297,76 +294,76 @@ export default function BudgetsPage() {
           </div>
 
         {/* Right Side: Month Toggle */}
-<div
-  className="relative flex bg-bg-deep p-1 border border-slate-gray/10 rounded-lg h-9 items-center w-full lg:w-auto"
-  role="tablist"
->
-  {[
-    {
-      label: 'This Month',
-      value: 'this',
-    },
-    {
-      label: 'Last Month',
-      value: 'last',
-    },
-  ].map((item) => (
-    <button
-      key={item.value}
-      type="button"
-      onClick={() => {
-        const now = new Date();
+        <div
+          className="relative flex bg-bg-deep p-1 border border-slate-gray/10 rounded-lg h-9 items-center w-full lg:w-auto"
+          role="tablist"
+        >
+          {[
+            {
+              label: 'This Month',
+              value: 'this',
+            },
+            {
+              label: 'Last Month',
+              value: 'last',
+            },
+          ].map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => {
+                const now = new Date();
 
-        if (item.value === 'this') {
-          const yyyy = now.getFullYear();
-          const mm = String(now.getMonth() + 1).padStart(2, '0');
-          setMonth(`${yyyy}-${mm}`);
-        } else {
-          const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-          const yyyy = prevMonth.getFullYear();
-          const mm = String(prevMonth.getMonth() + 1).padStart(2, '0');
-          setMonth(`${yyyy}-${mm}`);
-        }
-      }}
-      role="tab"
-      aria-selected={
-        item.value === 'this'
-          ? month === `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
-          : month === `${new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getFullYear()}-${String(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getMonth() + 1).padStart(2, '0')}`
-      }
-      className={`relative z-10 h-7 rounded-md text-[11px] font-semibold uppercase tracking-wider transition-colors duration-200 flex-1 lg:flex-initial lg:px-5 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-800/40 ${
-        (item.value === 'this' &&
-          month === `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`) ||
-        (item.value === 'last' &&
-          month === `${new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getFullYear()}-${String(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getMonth() + 1).padStart(2, '0')}`)
-          ? 'text-bg-deep font-bold'
-          : 'text-slate-gray hover:text-ivory-white'  
-      }`}
-    >
-      {item.label}
-    </button>
-  ))}
+                if (item.value === 'this') {
+                  const yyyy = now.getFullYear();
+                  const mm = String(now.getMonth() + 1).padStart(2, '0');
+                  setMonth(`${yyyy}-${mm}`);
+                } else {
+                  const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                  const yyyy = prevMonth.getFullYear();
+                  const mm = String(prevMonth.getMonth() + 1).padStart(2, '0');
+                  setMonth(`${yyyy}-${mm}`);
+                }
+              }}
+              role="tab"
+              aria-selected={
+                item.value === 'this'
+                  ? month === `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+                  : month === `${new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getFullYear()}-${String(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getMonth() + 1).padStart(2, '0')}`
+              }
+              className={`relative z-10 h-7 rounded-md text-[11px] font-semibold uppercase tracking-wider transition-colors duration-200 flex-1 lg:flex-initial lg:px-5 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-800/40 ${
+                (item.value === 'this' &&
+                  month === `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`) ||
+                (item.value === 'last' &&
+                  month === `${new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getFullYear()}-${String(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).getMonth() + 1).padStart(2, '0')}`)
+                  ? 'text-bg-deep font-bold'
+                  : 'text-slate-gray hover:text-ivory-white'  
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
 
-  <div
-    className="absolute top-1 bottom-1 rounded-md bg-emerald-900 shadow-sm transition-all duration-300 ease-out"
-    style={{
-      width: 'calc(50% - 4px)',
-      left:
-        month === `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
-          ? '4px'
-          : 'calc(50% + 0px)',
-    }}
-  />
-</div>
+          <div
+            className="absolute top-1 bottom-1 rounded-md bg-emerald-900 shadow-sm transition-all duration-300 ease-out"
+            style={{
+              width: 'calc(50% - 4px)',
+              left:
+                month === `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+                  ? '4px'
+                  : 'calc(50% + 0px)',
+            }}
+          />
+        </div>
         </div>
       </div>
 
-      {/* Budget Summary Stats */}
+      {/* Budget Summary Stats matching Expenses ledger card design style */}
       {statsLoading ? (
-        <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-4 md:p-5 shadow-sm">
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-5">
+        <section className="bg-card-fill border border-slate-gray/10 rounded-2xl p-5 shadow-sm">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="space-y-2">
+              <div key={i} className="space-y-2 p-3 rounded-xl bg-bg-deep/40 border border-slate-gray/5 text-center flex flex-col items-center justify-center">
                 <div className="h-3 bg-slate-gray/20 rounded w-16" />
                 <div className="h-6 bg-slate-gray/15 rounded w-24" />
               </div>
@@ -374,55 +371,54 @@ export default function BudgetsPage() {
           </div>
         </section>
       ) : !isError && !isIncomeError && budgets.length > 0 ? (
-        <section className="bg-card-fill border border-slate-gray/10 rounded-xl p-4 md:p-5 shadow-sm">
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-5">
-            <div className="space-y-1">
-              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase block">
+        <section className="bg-card-fill border border-slate-gray/10 rounded-2xl p-5 shadow-sm relative overflow-hidden group">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 relative z-10">
+            <div className="space-y-1 p-3 rounded-xl bg-bg-deep/40 border border-slate-gray/5 text-center flex flex-col items-center justify-center">
+              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase">
                 Total Budget
               </span>
-              <div className="font-numeric font-bold text-lg md:text-xl text-ivory-white flex items-center">
-                <IndianRupee size={16} className="stroke-[2.5] mr-0.5 text-slate-gray" />
+              <div className="font-numeric font-bold text-lg md:text-xl text-ivory-white flex items-center justify-center">
+                <IndianRupee size={16} className="stroke-[2.5] mr-1 text-slate-gray" />
                 {budgets.reduce((sum, b) => sum + (b.limit > 0 ? b.limit : 0), 0).toLocaleString('en-IN')}
               </div>
             </div>
             
-            <div className="space-y-1">
-              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase block">
+            <div className="space-y-1 p-3 rounded-xl bg-bg-deep/40 border border-slate-gray/5 text-center flex flex-col items-center justify-center">
+              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase">
                 Total Spent
               </span>
-              <div className="font-numeric font-bold text-lg md:text-xl text-ivory-white flex items-center">
-                <IndianRupee size={16} className="stroke-[2.5] mr-0.5 text-slate-gray" />
+              <div className="font-numeric font-bold text-lg md:text-xl text-ivory-white flex items-center justify-center">
+                <IndianRupee size={16} className="stroke-[2.5] mr-1 text-slate-gray" />
                 {budgets.reduce((sum, b) => sum + (b.limit > 0 ? b.spent : 0), 0).toLocaleString('en-IN')}
               </div>
             </div>
 
-            <div className="space-y-1">
-              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase block">
+            <div className="space-y-1 p-3 rounded-xl bg-bg-deep/40 border border-slate-gray/5 text-center flex flex-col items-center justify-center">
+              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase">
                 Remaining Budget
               </span>
-              <div className="font-numeric font-bold text-lg md:text-xl text-mint-cash flex items-center">
-                <IndianRupee size={16} className="stroke-[2.5] mr-0.5 opacity-80" />
+              <div className="font-numeric font-bold text-lg md:text-xl text-mint-cash flex items-center justify-center">
+                <IndianRupee size={16} className="stroke-[2.5] mr-1 opacity-80" />
                 {Math.max(0, budgets.reduce((sum, b) => sum + (b.limit > 0 ? (b.limit - b.spent) : 0), 0)).toLocaleString('en-IN')}
               </div>
             </div>
 
-            <div className="space-y-1">
-              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase block">
+            <div className="space-y-1 p-3 rounded-xl bg-bg-deep/40 border border-slate-gray/5 text-center flex flex-col items-center justify-center">
+              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase">
                 Uncapped Spending
               </span>
-              <div className="font-numeric font-bold text-lg md:text-xl text-ivory-white flex items-center">
-                <IndianRupee size={16} className="stroke-[2.5] mr-0.5 text-slate-gray" />
+              <div className="font-numeric font-bold text-lg md:text-xl text-ivory-white flex items-center justify-center">
+                <IndianRupee size={16} className="stroke-[2.5] mr-1 text-slate-gray" />
                 {budgets.reduce((sum, b) => sum + (b.limit > 0 ? 0 : b.spent), 0).toLocaleString('en-IN')}
               </div>
-            
             </div>
 
-            <div className="space-y-1">
-              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase block">
+            <div className="space-y-1 p-3 rounded-xl bg-bg-deep/40 border border-slate-gray/5 text-center flex flex-col items-center justify-center col-span-2 sm:col-span-1">
+              <span className="text-[10px] text-slate-gray font-semibold tracking-wide uppercase">
                 Monthly Income
               </span>
-              <div className="font-numeric font-bold text-lg md:text-xl text-ivory-white flex items-center">
-                <IndianRupee size={16} className="stroke-[2.5] mr-0.5 text-slate-gray" />
+              <div className="font-numeric font-bold text-lg md:text-xl text-ivory-white flex items-center justify-center">
+                <IndianRupee size={16} className="stroke-[2.5] mr-1 text-slate-gray" />
                 {monthlyIncome.toLocaleString('en-IN')}
               </div>
             </div>
@@ -580,7 +576,7 @@ export default function BudgetsPage() {
                     step="any"
                     placeholder="e.g. 50000"
                     {...registerFinancial('monthlyIncome', { valueAsNumber: true })}
-                    className={`w-full h-full bg-bg-deep border rounded-lg pl-9 pr-4 py-2.5 text-sm text-ivory-white placeholder:text-slate-gray/30 focus-ring font-numeric ${
+                    className={`w-full h-full bg-bg-deep border rounded-lg pl-9 pr-4 py-2.5 text-sm text-ivory-white placeholder:text-slate-gray/35 focus-ring font-numeric ${
                       financialErrors.monthlyIncome ? 'border-crimson-alert/40' : 'border-slate-gray/10'
                     }`}
                   />
@@ -605,7 +601,7 @@ export default function BudgetsPage() {
                     max="31"
                     placeholder="e.g. 1"
                     {...registerFinancial('payday', { valueAsNumber: true })}
-                    className={`w-full h-full bg-bg-deep border rounded-lg pl-9 pr-4 py-2.5 text-sm text-ivory-white placeholder:text-slate-gray/30 focus-ring font-numeric ${
+                    className={`w-full h-full bg-bg-deep border rounded-lg pl-9 pr-4 py-2.5 text-sm text-ivory-white placeholder:text-slate-gray/35 focus-ring font-numeric ${
                       financialErrors.payday ? 'border-crimson-alert/40' : 'border-slate-gray/10'
                     }`}
                   />
@@ -691,7 +687,7 @@ export default function BudgetsPage() {
                     step="any"
                     placeholder="e.g. 5000"
                     {...registerBudget('monthlyLimit', { valueAsNumber: true })}
-                    className={`w-full h-full bg-bg-deep border rounded-lg pl-9 pr-4 py-2.5 text-sm text-ivory-white placeholder:text-slate-gray/30 focus-ring font-numeric ${
+                    className={`w-full h-full bg-bg-deep border rounded-lg pl-9 pr-4 py-2.5 text-sm text-ivory-white placeholder:text-slate-gray/35 focus-ring font-numeric ${
                       budgetErrors.monthlyLimit ? 'border-crimson-alert/40' : 'border-slate-gray/10'
                     }`}
                     disabled={mutation.isPending}
@@ -719,7 +715,6 @@ export default function BudgetsPage() {
                 </button>
                 <button
                   type="submit"
-                  onClick={handleSubmitBudget(onSubmitBudget)}
                   className="flex-1 h-11 bg-mint-cash hover:bg-emerald-400 text-bg-deep text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
                   disabled={mutation.isPending}
                 >

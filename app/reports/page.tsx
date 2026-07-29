@@ -34,13 +34,6 @@ interface CategorySpending {
   percentage: number;
 }
 
-interface FinancialInsights {
-  highestCategory: string;
-  highestCategoryAmount: number;
-  largestExpense: IExpense | null;
-  avgTransactionAmount: number;
-}
-
 export default function ReportsPage() {
   const [period, setPeriod] = useState<'day' | 'month'>('month');
   const [date, setDate] = useState(() => {
@@ -203,22 +196,6 @@ export default function ReportsPage() {
       .slice(0, 5);
   };
 
-  const getFinancialInsights = (): FinancialInsights => {
-    const categorySpending = getCategorySpending();
-    const highestCategory = categorySpending[0]?.category || 'None';
-    const highestCategoryAmount = categorySpending[0]?.amount || 0;
-    
-    const largestExpense = expenses.length > 0 
-      ? expenses.reduce((max, e) => e.amount > max.amount ? e : max, expenses[0])
-      : null;
-    
-    const avgTransactionAmount = expenses.length > 0
-      ? expenses.reduce((sum, e) => sum + e.amount, 0) / expenses.length
-      : 0;
-
-    return { highestCategory, highestCategoryAmount, largestExpense, avgTransactionAmount };
-  };
-
   const getBudgetPerformance = () => {
     const categorySpending = getCategorySpending();
     return budgets
@@ -232,7 +209,6 @@ export default function ReportsPage() {
 
   const summary = calculateFinancialSummary();
   const categorySpending = getCategorySpending();
-  const insights = getFinancialInsights();
   const budgetPerformance = getBudgetPerformance();
 
   const EmptyState = () => (
@@ -253,15 +229,15 @@ export default function ReportsPage() {
 
   const LoadingSkeleton = () => (
     <div className="space-y-4">
-      <div className={`grid gap-3 ${period === 'month' ? 'grid-cols-2 lg:grid-cols-5' : 'grid-cols-2 lg:grid-cols-3'}`}>
+      <div className={`grid gap-3 ${period === 'month' ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2 lg:grid-cols-2'}`}>
         {period === 'month' 
-          ? [1, 2, 3, 4, 5].map((i) => (
+          ? [1, 2, 3, 4].map((i) => (
               <div key={i} className="bg-card-fill border border-slate-gray/10 rounded-xl p-4">
                 <div className="h-3 bg-slate-gray/20 rounded mb-2 w-16" />
                 <div className="h-5 bg-slate-gray/20 rounded w-20" />
               </div>
             ))
-          : [1, 2, 3].map((i) => (
+          : [1, 2].map((i) => (
               <div key={i} className="bg-card-fill border border-slate-gray/10 rounded-xl p-4">
                 <div className="h-3 bg-slate-gray/20 rounded mb-2 w-16" />
                 <div className="h-5 bg-slate-gray/20 rounded w-20" />
@@ -319,39 +295,39 @@ export default function ReportsPage() {
     const isLoading = exportLoading[type];
     
     return (
-      <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 hover:border-mint-cash/30 transition-all">
-        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+      <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-4 sm:p-5 hover:border-mint-cash/30 transition-all flex flex-col justify-between h-full">
+        <div className="flex items-start gap-3.5 mb-4">
           <div className={`p-2.5 rounded-lg ${isLoading ? 'bg-slate-gray/10' : 'bg-mint-cash/10'} ${isLoading ? 'text-slate-gray' : 'text-mint-cash'} flex-shrink-0`} aria-hidden="true">
             {isLoading ? <Loader2 size={20} className="animate-spin" /> : icon}
           </div>
-          <div className="flex-1 w-full">
+          <div>
             <h4 className="font-semibold text-sm text-ivory-white mb-1">{title}</h4>
-            <p className="text-xs text-slate-gray mb-4">{description}</p>
-            <button 
-              type="button"
-              onClick={() => triggerBackgroundDownload(type)}
-              disabled={!hasData || isLoading}
-              aria-label={`Download ${type.toUpperCase()} report`}
-              className={`w-full sm:w-auto h-10 px-5 text-sm font-semibold rounded-lg flex items-center justify-center gap-2 transition-all focus:outline-none focus:ring-2 focus:ring-mint-cash focus:ring-offset-2 focus:ring-offset-card-fill ${
-                !hasData || isLoading 
-                  ? 'bg-slate-gray/20 text-slate-gray cursor-not-allowed' 
-                  : 'bg-mint-cash hover:bg-pine-light text-white shadow-sm hover:shadow-md'
-              }`}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <FileDown size={16} />
-                  Download
-                </>
-              )}
-            </button>
+            <p className="text-xs text-slate-gray leading-relaxed">{description}</p>
           </div>
         </div>
+        <button 
+          type="button"
+          onClick={() => triggerBackgroundDownload(type)}
+          disabled={!hasData || isLoading}
+          aria-label={`Download ${type.toUpperCase()} report`}
+          className={`w-full h-10 px-4 text-xs sm:text-sm font-semibold rounded-lg flex items-center justify-center gap-2 transition-all focus:outline-none focus:ring-2 focus:ring-mint-cash focus:ring-offset-2 focus:ring-offset-card-fill ${
+            !hasData || isLoading 
+              ? 'bg-slate-gray/20 text-slate-gray cursor-not-allowed' 
+              : 'bg-mint-cash hover:bg-pine-light text-white shadow-sm hover:shadow-md'
+          }`}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 size={16} className="animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <FileDown size={16} />
+              Download
+            </>
+          )}
+        </button>
       </div>
     );
   };
@@ -362,7 +338,6 @@ export default function ReportsPage() {
         <h1 className="font-display font-semibold text-2xl md:text-3xl text-ivory-white tracking-tight">
           Reports & Analytics
         </h1>
-        <p className="text-sm text-slate-gray mt-1">Generate statements and analyze your financial performance.</p>
       </div>
 
       <div className="sticky top-3 z-30 rounded-xl border border-slate-gray/10 bg-card-fill/95 p-3 shadow-md backdrop-blur-md">
@@ -458,7 +433,7 @@ export default function ReportsPage() {
         <>
           <section>
             <h3 className="font-semibold text-sm text-ivory-white mb-3">Financial Summary</h3>
-            <div className={`grid gap-3 ${period === 'month' ? 'grid-cols-2 lg:grid-cols-5' : 'grid-cols-2 lg:grid-cols-3'}`}>
+            <div className={`grid gap-3 ${period === 'month' ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2 lg:grid-cols-2'}`}>
               {period === 'month' && (
                 <>
                   <FinancialSummaryCard
@@ -492,20 +467,13 @@ export default function ReportsPage() {
                 color="text-rupee-gold"
                 bgColor="bg-rupee-gold/10"
               />
-              <FinancialSummaryCard
-                icon={<Calendar size={18} />}
-                label={period === 'day' ? "Today's Spend" : "Avg. Daily Spend"}
-                value={`₹${summary.avgDailySpend.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
-                color="text-slate-gray"
-                bgColor="bg-slate-gray/10"
-              />
             </div>
           </section>
 
           {budgetPerformance.length > 0 && (
             <section>
               <h3 className="font-semibold text-sm text-ivory-white mb-3">Budget Performance</h3>
-              <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 space-y-4 hover:border-mint-cash/30 transition-all">
+              <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-4 space-y-3 hover:border-mint-cash/30 transition-all">
                 {budgetPerformance.map(budget => {
                   const isOverBudget = budget.percentage > 100;
                   const isNearLimit = budget.percentage >= 80 && budget.percentage <= 100;
@@ -514,15 +482,15 @@ export default function ReportsPage() {
                   const textColor = isOverBudget ? 'text-crimson-alert' : isNearLimit ? 'text-rupee-gold' : 'text-slate-gray';
                   
                   return (
-                    <div key={budget.budgetId || budget.category} className="space-y-2">
+                    <div key={budget.budgetId || budget.category} className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-ivory-white">{budget.category}</span>
-                        <span className={`text-xs font-semibold ${textColor}`}>
+                        <span className="text-xs font-medium text-ivory-white">{budget.category}</span>
+                        <span className={`text-[11px] font-semibold ${textColor}`}>
                           ₹{budget.spent.toLocaleString('en-IN')} / ₹{budget.limit.toLocaleString('en-IN')}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 h-2.5 bg-slate-gray/10 rounded-full overflow-hidden">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex-1 h-2 bg-slate-gray/10 rounded-full overflow-hidden">
                           <div 
                             className={`h-full ${progressColor} rounded-full transition-all duration-500`}
                             style={{ width: `${Math.min(budget.percentage, 100)}%` }}
@@ -533,11 +501,11 @@ export default function ReportsPage() {
                             aria-label={`${budget.category} budget usage`}
                           />
                         </div>
-                        <span className={`text-xs font-semibold w-12 text-right ${textColor}`}>
+                        <span className={`text-[11px] font-semibold w-10 text-right ${textColor}`}>
                           {budget.percentage.toFixed(0)}%
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center justify-between text-[11px]">
                         <span className="text-slate-gray">Remaining: ₹{remaining.toLocaleString('en-IN')}</span>
                         <span className={textColor}>{isOverBudget ? 'Over budget' : isNearLimit ? 'Near limit' : 'On track'}</span>
                       </div>
@@ -584,29 +552,6 @@ export default function ReportsPage() {
               </div>
             </section>
           )}
-
-          <section>
-            <h3 className="font-semibold text-sm text-ivory-white mb-3">Financial Insights</h3>
-            <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 hover:border-mint-cash/30 transition-all">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 bg-slate-gray/5 rounded-lg h-full flex flex-col justify-center">
-                  <div className="text-xs text-slate-gray mb-2 font-medium">Highest Category</div>
-                  <div className="text-sm font-semibold text-ivory-white">{insights.highestCategory}</div>
-                  <div className="text-xs text-mint-cash mt-1 font-medium">₹{insights.highestCategoryAmount.toLocaleString('en-IN')}</div>
-                </div>
-                <div className="p-4 bg-slate-gray/5 rounded-lg h-full flex flex-col justify-center">
-                  <div className="text-xs text-slate-gray mb-2 font-medium">Largest Expense</div>
-                  <div className="text-sm font-semibold text-ivory-white truncate" title={insights.largestExpense?.title || 'None'}>{insights.largestExpense?.title || 'None'}</div>
-                  <div className="text-xs text-crimson-alert mt-1 font-medium">₹{insights.largestExpense?.amount.toLocaleString('en-IN') || '0'}</div>
-                </div>
-                <div className="p-4 bg-slate-gray/5 rounded-lg h-full flex flex-col justify-center">
-                  <div className="text-xs text-slate-gray mb-2 font-medium">Avg. Transaction</div>
-                  <div className="text-sm font-semibold text-ivory-white">₹{insights.avgTransactionAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-                  <div className="text-xs text-slate-gray mt-1">Per transaction</div>
-                </div>
-              </div>
-            </div>
-          </section>
 
           <section>
             <h3 className="font-semibold text-sm text-ivory-white mb-3">Export Reports</h3>

@@ -107,189 +107,214 @@ export async function GET(req: Request) {
       format: 'a4',
     });
 
-    const cardFill = [255, 255, 255];
     const mintCash = [27, 67, 50];
     const pineLight = [45, 106, 79];
-    const ivoryWhite = [28, 28, 26];
-    const slateGray = [107, 107, 99];
+    const ivoryWhite = [40, 40, 38];
+    const slateGray = [110, 110, 100];
+    const lightGrayBg = [248, 249, 250];
 
+    // Header Banner
     doc.setFillColor(mintCash[0], mintCash[1], mintCash[2]);
-    doc.rect(0, 0, 210, 45, 'F');
+    doc.rect(0, 0, 210, 42, 'F');
 
     doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(22);
+    doc.setFontSize(20);
     doc.setTextColor(255, 255, 255);
-    doc.text('SPENDWISE', 15, 18);
+    doc.text('SPENDWISE', 15, 16);
 
     doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(255, 255, 255);
-    doc.text(dateParam ? 'DAILY FINANCIAL BREAKDOWN' : 'MONTHLY FINANCIAL BREAKDOWN', 15, 28);
+    doc.setFontSize(10);
+    doc.setTextColor(200, 230, 210);
+    doc.text(dateParam ? 'DAILY FINANCIAL STATEMENT' : 'MONTHLY FINANCIAL STATEMENT', 15, 24);
 
     doc.setFont('Helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(255, 255, 255);
-    doc.text(`User: ${user.name}`, 195, 16, { align: 'right' });
-    doc.text(`Email: ${user.email}`, 195, 22, { align: 'right' });
-    doc.text(`Period: ${reportPeriodLabel}`, 195, 28, { align: 'right' });
+    doc.setFontSize(8.5);
+    doc.setTextColor(240, 240, 240);
+    doc.text(`User: ${user.name}`, 195, 13, { align: 'right' });
+    doc.text(`Email: ${user.email}`, 195, 19, { align: 'right' });
+    doc.text(`Period: ${reportPeriodLabel}`, 195, 25, { align: 'right' });
 
     doc.setDrawColor(pineLight[0], pineLight[1], pineLight[2]);
-    doc.line(0, 45, 210, 45);
+    doc.line(0, 42, 210, 42);
 
-    let yCursor = 58;
+    let yCursor = 52;
 
+    // Summary Cards Section (3 columns)
     const cardWidth = 56;
-    const cardHeight = 24;
+    const cardHeight = 22;
     const cardY = yCursor;
+    const leftMargin = 15;
+    const gap = 6;
 
-    doc.setFillColor(cardFill[0], cardFill[1], cardFill[2]);
-    doc.rect(15, cardY, cardWidth, cardHeight, 'F');
-    doc.setFont('Helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
-    doc.text('TOTAL SPENT', 20, cardY + 7);
+    const cards = [
+      {
+        title: 'TOTAL SPENT',
+        value: `INR ${totalSpent.toLocaleString('en-IN')}`,
+      },
+      {
+        title: dateParam ? 'MONTHLY BUDGET' : 'BUDGET LIMIT',
+        value: totalLimit > 0 ? `INR ${totalLimit.toLocaleString('en-IN')}` : 'Unset',
+      },
+      {
+        title: 'LARGEST OUTFLOW',
+        value: topCategoryName !== 'None' ? `${topCategoryName}` : 'None',
+        sub: topCategoryName !== 'None' ? `INR ${topCategoryAmt.toLocaleString('en-IN')}` : '',
+      },
+    ];
+
+    cards.forEach((card, index) => {
+      const xPos = leftMargin + index * (cardWidth + gap);
+      
+      doc.setFillColor(lightGrayBg[0], lightGrayBg[1], lightGrayBg[2]);
+      doc.setDrawColor(225, 230, 235);
+      doc.roundedRect(xPos, cardY, cardWidth, cardHeight, 2, 2, 'FD');
+
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
+      doc.text(card.title, xPos + 5, cardY + 7);
+
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
+      doc.text(card.value, xPos + 5, cardY + 15);
+
+      if (card.sub) {
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
+        doc.text(card.sub, xPos + 5, cardY + 19);
+      }
+    });
+
+    yCursor += cardHeight + 12;
+
+    const renderSectionHeader = (title: string) => {
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(mintCash[0], mintCash[1], mintCash[2]);
+      doc.text(title, 15, yCursor);
+      yCursor += 4;
+    };
+
+    // Category Breakdown Table
+    renderSectionHeader('CATEGORY BREAKDOWN');
+
+    doc.setFillColor(mintCash[0], mintCash[1], mintCash[2]);
+    doc.rect(15, yCursor, 180, 7, 'F');
     doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
-    doc.text(`INR ${totalSpent.toLocaleString('en-IN')}`, 20, cardY + 16);
-
-    doc.setFillColor(cardFill[0], cardFill[1], cardFill[2]);
-    doc.rect(77, cardY, cardWidth, cardHeight, 'F');
-    doc.setFont('Helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
-    doc.text(dateParam ? 'MONTHLY BUDGET' : 'BUDGET LIMIT', 82, cardY + 7);
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
-    const limitLabel = totalLimit > 0 ? `INR ${totalLimit.toLocaleString('en-IN')}` : 'Unset';
-    doc.text(limitLabel, 82, cardY + 16);
-
-    doc.setFillColor(cardFill[0], cardFill[1], cardFill[2]);
-    doc.rect(139, cardY, cardWidth, cardHeight, 'F');
-    doc.setFont('Helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
-    doc.text('LARGEST OUTFLOW', 144, cardY + 7);
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
-    const topCatString = topCategoryName !== 'None' ? `${topCategoryName}` : 'None';
-    doc.text(topCatString, 144, cardY + 14);
-    doc.setFont('Helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
-    doc.text(`Spent: INR ${topCategoryAmt.toLocaleString('en-IN')}`, 144, cardY + 20);
-
-    yCursor += cardHeight + 15;
-
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
-    doc.text('CATEGORY BREAKDOWN', 15, yCursor);
-    yCursor += 5;
-
-    doc.setFillColor(cardFill[0], cardFill[1], cardFill[2]);
-    doc.rect(15, yCursor, 180, 8, 'F');
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(mintCash[0], mintCash[1], mintCash[2]);
-    doc.text('Category', 20, yCursor + 5.5);
-    doc.text('Spent Amount', 110, yCursor + 5.5, { align: 'right' });
-    doc.text('% of Period Total', 190, yCursor + 5.5, { align: 'right' });
-    yCursor += 8;
-
-    doc.setFont('Helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
+    doc.setTextColor(255, 255, 255);
+    doc.text('Category', 20, yCursor + 4.8);
+    doc.text('Spent Amount', 115, yCursor + 4.8, { align: 'right' });
+    doc.text('% of Total', 190, yCursor + 4.8, { align: 'right' });
+    yCursor += 7;
 
     const breakdownItems = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
 
     if (breakdownItems.length === 0) {
-      doc.text('No transaction logs for this period.', 20, yCursor + 6);
-      yCursor += 12;
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
+      yCursor += 6;
+      doc.text('No transaction logs for this period.', 20, yCursor);
+      yCursor += 10;
     } else {
-      breakdownItems.forEach(([cat, amt]) => {
+      breakdownItems.forEach(([cat, amt], idx) => {
         const pct = totalSpent > 0 ? ((amt / totalSpent) * 100).toFixed(1) : '0';
-        doc.line(15, yCursor, 195, yCursor);
-        doc.text(cat, 20, yCursor + 5);
-        doc.text(`INR ${amt.toLocaleString('en-IN')}`, 110, yCursor + 5, { align: 'right' });
-        doc.text(`${pct}%`, 190, yCursor + 5, { align: 'right' });
-        yCursor += 8;
+        
+        if (idx % 2 === 0) {
+          doc.setFillColor(252, 253, 253);
+          doc.rect(15, yCursor, 180, 7, 'F');
+        }
+
+        doc.setDrawColor(235, 240, 242);
+        doc.line(15, yCursor + 7, 195, yCursor + 7);
+
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
+        doc.text(cat, 20, yCursor + 4.8);
+        doc.text(`INR ${amt.toLocaleString('en-IN')}`, 115, yCursor + 4.8, { align: 'right' });
+        doc.text(`${pct}%`, 190, yCursor + 4.8, { align: 'right' });
+        yCursor += 7;
       });
-      doc.line(15, yCursor, 195, yCursor);
-      yCursor += 12;
+      yCursor += 10;
     }
 
-    if (yCursor > 220) {
+    if (yCursor > 230) {
       doc.addPage();
-      yCursor = 25;
+      yCursor = 20;
     }
 
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
-    doc.text('ITEMIZED TRANSACTIONS LEDGER', 15, yCursor);
-    yCursor += 5;
+    // Itemized Transactions Ledger
+    renderSectionHeader('ITEMIZED TRANSACTIONS LEDGER');
 
-    doc.setFillColor(cardFill[0], cardFill[1], cardFill[2]);
-    doc.rect(15, yCursor, 180, 8, 'F');
+    doc.setFillColor(mintCash[0], mintCash[1], mintCash[2]);
+    doc.rect(15, yCursor, 180, 7, 'F');
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(8);
-    doc.setTextColor(mintCash[0], mintCash[1], mintCash[2]);
-    doc.text('Date', 20, yCursor + 5.5);
-    doc.text('Title & Category', 50, yCursor + 5.5);
-    doc.text('Recurring', 140, yCursor + 5.5);
-    doc.text('Amount', 190, yCursor + 5.5, { align: 'right' });
-    yCursor += 8;
-
-    doc.setFont('Helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
+    doc.setTextColor(255, 255, 255);
+    doc.text('Date', 20, yCursor + 4.8);
+    doc.text('Title & Category', 55, yCursor + 4.8);
+    doc.text('Recurring', 140, yCursor + 4.8);
+    doc.text('Amount', 190, yCursor + 4.8, { align: 'right' });
+    yCursor += 7;
 
     if (expenses.length === 0) {
-      doc.text('No itemized transactions logged.', 20, yCursor + 6);
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
+      yCursor += 6;
+      doc.text('No itemized transactions logged.', 20, yCursor);
     } else {
-      expenses.forEach((e) => {
+      expenses.forEach((e, idx) => {
         if (yCursor > 270) {
           doc.addPage();
           yCursor = 20;
 
-          doc.setFillColor(cardFill[0], cardFill[1], cardFill[2]);
-          doc.rect(15, yCursor, 180, 8, 'F');
+          doc.setFillColor(mintCash[0], mintCash[1], mintCash[2]);
+          doc.rect(15, yCursor, 180, 7, 'F');
           doc.setFont('Helvetica', 'bold');
           doc.setFontSize(8);
-          doc.setTextColor(mintCash[0], mintCash[1], mintCash[2]);
-          doc.text('Date', 20, yCursor + 5.5);
-          doc.text('Title & Category', 50, yCursor + 5.5);
-          doc.text('Recurring', 140, yCursor + 5.5);
-          doc.text('Amount', 190, yCursor + 5.5, { align: 'right' });
-          yCursor += 8;
-
-          doc.setFont('Helvetica', 'normal');
-          doc.setFontSize(8);
-          doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
+          doc.setTextColor(255, 255, 255);
+          doc.text('Date', 20, yCursor + 4.8);
+          doc.text('Title & Category', 55, yCursor + 4.8);
+          doc.text('Recurring', 140, yCursor + 4.8);
+          doc.text('Amount', 190, yCursor + 4.8, { align: 'right' });
+          yCursor += 7;
         }
 
-        doc.line(15, yCursor, 195, yCursor);
+        if (idx % 2 === 0) {
+          doc.setFillColor(252, 253, 253);
+          doc.rect(15, yCursor, 180, 10, 'F');
+        }
 
-        doc.text(formatPDFDate(e.date), 20, yCursor + 5.5);
+        doc.setDrawColor(235, 240, 242);
+        doc.line(15, yCursor + 10, 195, yCursor + 10);
 
-        let titleString = e.title;
-        if (titleString.length > 36) titleString = titleString.substring(0, 33) + '...';
-        doc.text(titleString, 50, yCursor + 4.5);
-
-        doc.setFontSize(6.5);
-        doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
-        doc.text(e.category, 50, yCursor + 8);
-        doc.setFontSize(8);
+        // Ensure normal font for row data
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(8.5);
         doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
 
-        doc.text(e.isRecurring ? 'Yes' : 'No', 140, yCursor + 5.5);
-        doc.text(`INR ${e.amount.toLocaleString('en-IN')}`, 190, yCursor + 5.5, { align: 'right' });
+        doc.text(formatPDFDate(e.date), 20, yCursor + 6);
+
+        let titleString = e.title;
+        if (titleString.length > 35) titleString = titleString.substring(0, 32) + '...';
+        doc.text(titleString, 55, yCursor + 4.5);
+
+        doc.setFontSize(7);
+        doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
+        doc.text(e.category, 55, yCursor + 8.5);
+
+        doc.setFontSize(8.5);
+        doc.setTextColor(ivoryWhite[0], ivoryWhite[1], ivoryWhite[2]);
+        doc.text(e.isRecurring ? 'Yes' : 'No', 140, yCursor + 6);
+        doc.text(`INR ${e.amount.toLocaleString('en-IN')}`, 190, yCursor + 6, { align: 'right' });
+        
         yCursor += 10;
       });
-      doc.line(15, yCursor, 195, yCursor);
     }
 
     const pdfBuffer = Buffer.from(doc.output('arraybuffer'));

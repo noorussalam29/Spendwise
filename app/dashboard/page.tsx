@@ -81,7 +81,7 @@ export default function DashboardPage() {
         </div>
         <button
           onClick={() => window.location.reload()}
-          className="inline-flex h-9 px-4 bg-mint-cash hover:opacity-90 text-white text-xs font-bold rounded-lg items-center justify-center transition-colors cursor-pointer"
+          className="inline-flex h-9 px-4 bg-mint-cash hover:opacity-90 text-white text-xs font-bold rounded-lg items-center justify-center transition-colors cursor-pointer focus:outline-none focus:ring-0 focus:ring-offset-0"
         >
           Retry Connection
         </button>
@@ -115,9 +115,6 @@ export default function DashboardPage() {
           <h1 className="font-display font-semibold text-2xl md:text-3xl text-ivory-white tracking-tight">
             Financial Command Center
           </h1>
-          <p className="text-xs md:text-sm text-slate-gray mt-1">
-            Your money at a glance. Stay in control between paydays.
-          </p>
         </div>
       </div>
 
@@ -318,7 +315,7 @@ export default function DashboardPage() {
 
       {/* CHARTS CONTAINER (Single Category Breakdown Card) */}
       <section className="grid grid-cols-1 gap-6">
-        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 md:p-6 flex flex-col justify-between space-y-4 shadow-sm">
+        <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-5 md:p-6 flex flex-col justify-between space-y-4 shadow-sm outline-none focus:outline-none focus:ring-0">
           <div className="flex items-center justify-between border-b border-slate-gray/5 pb-2">
             <h3 className="font-display font-semibold text-sm md:text-base text-ivory-white flex items-center gap-2">
               <PieIcon size={16} className="text-mint-cash" />
@@ -327,10 +324,10 @@ export default function DashboardPage() {
             <span className="text-[10px] text-slate-gray font-medium">Calendar Month</span>
           </div>
 
-          <div className="h-60 flex items-center justify-center">
+          <div className="h-60 flex items-center justify-center outline-none focus:outline-none focus:ring-0 focus-visible:outline-none">
             {isMounted && charts.categoriesBreakdown.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+                <PieChart className="outline-none focus:outline-none">
                   <Pie
                     data={charts.categoriesBreakdown}
                     cx="50%"
@@ -339,9 +336,11 @@ export default function DashboardPage() {
                     outerRadius={85}
                     paddingAngle={3}
                     dataKey="value"
+                    className="outline-none focus:outline-none"
+                    style={{ outline: 'none' }}
                   >
                     {charts.categoriesBreakdown.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.name] || '#64748B'} />
+                      <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.name] || '#64748B'} className="outline-none focus:outline-none" style={{ outline: 'none' }} />
                     ))}
                   </Pie>
                   <Tooltip
