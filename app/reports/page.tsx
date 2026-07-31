@@ -157,12 +157,12 @@ export default function ReportsPage() {
 
   const calculateFinancialSummary = (): FinancialSummary => {
     const totalIncome = monthlyIncome;
-    
-    const totalExpenses = expenses
-      .filter(e => e.category !== 'Savings')
+    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const trueExpenses = expenses
+      .filter(e => e.category.toLowerCase() !== 'savings')
       .reduce((sum, e) => sum + e.amount, 0);
-    
-    const netSavings = totalIncome - totalExpenses;
+
+    const netSavings = totalIncome - trueExpenses;
     const totalTransactions = expenses.length;
     
     const daysInPeriod = period === 'month' 
@@ -176,12 +176,12 @@ export default function ReportsPage() {
 
   const getCategorySpending = (): CategorySpending[] => {
     const categoryTotals: Record<string, number> = {};
-    const totalExpenses = expenses
-      .filter(e => e.category !== 'Savings')
+    const totalExpensesCalc = expenses
+      .filter(e => e.category.toLowerCase() !== 'savings')
       .reduce((sum, e) => sum + e.amount, 0);
 
     expenses.forEach(e => {
-      if (e.category !== 'Savings') {
+      if (e.category.toLowerCase() !== 'savings') {
         categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.amount;
       }
     });
@@ -190,7 +190,7 @@ export default function ReportsPage() {
       .map(([category, amount]) => ({
         category,
         amount,
-        percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0
+        percentage: totalExpensesCalc > 0 ? (amount / totalExpensesCalc) * 100 : 0
       }))
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 5);
@@ -232,13 +232,13 @@ export default function ReportsPage() {
       <div className={`grid gap-3 ${period === 'month' ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2 lg:grid-cols-2'}`}>
         {period === 'month' 
           ? [1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-card-fill border border-slate-gray/10 rounded-xl p-4">
+              <div key={i} className="bg-card-fill border border-slate-gray/10 rounded-xl p-4 flex flex-col items-center">
                 <div className="h-3 bg-slate-gray/20 rounded mb-2 w-16" />
                 <div className="h-5 bg-slate-gray/20 rounded w-20" />
               </div>
             ))
           : [1, 2].map((i) => (
-              <div key={i} className="bg-card-fill border border-slate-gray/10 rounded-xl p-4">
+              <div key={i} className="bg-card-fill border border-slate-gray/10 rounded-xl p-4 flex flex-col items-center">
                 <div className="h-3 bg-slate-gray/20 rounded mb-2 w-16" />
                 <div className="h-5 bg-slate-gray/20 rounded w-20" />
               </div>
@@ -267,8 +267,8 @@ export default function ReportsPage() {
     color: string, 
     bgColor: string 
   }) => (
-    <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-4 h-full hover:border-mint-cash/30 transition-all">
-      <div className="flex items-center justify-between mb-2">
+    <div className="bg-card-fill border border-slate-gray/10 rounded-xl p-4 h-full hover:border-mint-cash/30 transition-all flex flex-col items-center text-center">
+      <div className="flex items-center justify-between w-full mb-2">
         <div className={`p-1.5 rounded-lg ${bgColor} ${color}`} aria-hidden="true">{icon}</div>
         {trend && (
           <div className={`flex items-center gap-1 text-xs ${trend === 'up' ? 'text-mint-cash' : 'text-crimson-alert'}`} aria-hidden="true">
@@ -276,8 +276,8 @@ export default function ReportsPage() {
           </div>
         )}
       </div>
+      <div className="text-xs text-slate-gray mb-1">{label}</div>
       <div className={`font-display font-semibold text-lg ${color}`}>{value}</div>
-      <div className="text-xs text-slate-gray mt-1">{label}</div>
     </div>
   );
 
@@ -343,7 +343,6 @@ export default function ReportsPage() {
       <div className="sticky top-3 z-30 rounded-xl border border-slate-gray/10 bg-card-fill/95 p-3 shadow-md backdrop-blur-md">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           
-          {/* Left Side: Pagination Arrows & Custom Date Picker Combo */}
           <div className="flex items-center justify-between gap-2 w-full lg:w-auto">
             <div className="flex items-center gap-3 min-w-0">
               <div className="flex items-center gap-0.5 bg-bg-deep p-0.5 rounded-lg border border-slate-gray/10 shrink-0">
@@ -365,7 +364,6 @@ export default function ReportsPage() {
                 </button>
               </div>
 
-              {/* DYNAMIC CLICKABLE TITLE DATE/MONTH SELECTOR */}
               <div className="min-w-0 relative group">
                 <div className="relative flex items-center gap-2 cursor-pointer max-w-full">
                   <label className="text-sm font-bold text-ivory-white group-hover:text-mint-cash transition-colors flex items-center gap-1.5 cursor-pointer truncate">
@@ -390,7 +388,6 @@ export default function ReportsPage() {
             </span>
           </div>
 
-          {/* Right Side: Period Toggle */}
           <div
             className="relative flex bg-bg-deep p-1 border border-slate-gray/10 rounded-lg h-9 items-center w-full lg:w-auto"
             role="tablist"
