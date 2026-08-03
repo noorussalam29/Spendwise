@@ -238,9 +238,6 @@ export default function BudgetsPage() {
           <span>Set Income</span>
         </button>
       </div>
-      <p className="block sm:hidden text-xs text-slate-gray -mt-2">
-        Set monthly spending limits and track your consumption.
-      </p>
 
       {/* RE-ARCHITECTED STICKY NAVIGATION DOCK */}
       <div className="sticky top-3 z-30 rounded-xl border border-slate-gray/10 bg-card-fill/95 p-3 shadow-md backdrop-blur-md">
