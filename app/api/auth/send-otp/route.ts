@@ -31,7 +31,9 @@ export async function POST(req: Request) {
     const otp = String(generateOTP());
     const otpExpiry = generateOTPExpiry(10);
 
-    console.log(`👉 SAVING OTP FOR ${cleanEmail}:`, otp);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`👉 OTP generated for ${cleanEmail} (dev only)`);
+    }
 
     // Assign properties directly to the Mongoose document instance
     user.resetOTP = otp;
